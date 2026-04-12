@@ -2,6 +2,14 @@
 
 Python script to query Gaia data.
 
+## Prerequisites
+
+### astroquery
+
+```bash
+pip install astroquery
+```
+
 ## Usage
 
 ```bash
