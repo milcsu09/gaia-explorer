@@ -580,7 +580,7 @@ operator* (double scalar, const vector3<T> &v)
 
 
 static std::string
-fmt (double v)
+to_human_round (double v)
 {
   char buffer[256];
 
@@ -594,35 +594,35 @@ std::string
 to_human (double x)
 {
   if (x == 0)
-    return fmt (x);
+    return to_human_round (x);
 
   const auto ax = std::abs (x);
 
   if (ax >= 1e12)
-    return fmt (x * 1e-12) + "T";
+    return to_human_round (x * 1e-12) + "T";
 
   if (ax >= 1e9)
-    return fmt (x * 1e-9) + "G";
+    return to_human_round (x * 1e-9) + "G";
 
   if (ax >= 1e6)
-    return fmt (x * 1e-6) + "M";
+    return to_human_round (x * 1e-6) + "M";
 
   if (ax >= 1e3)
-    return fmt (x * 1e-3) + "k";
+    return to_human_round (x * 1e-3) + "k";
 
   if (ax >= 1)
-    return fmt (x);
+    return to_human_round (x);
 
   if (ax >= 1e-3)
-    return fmt (x * 1e3) + "m";
+    return to_human_round (x * 1e3) + "m";
 
   if (ax >= 1e-6)
-    return fmt (x * 1e6) + "µ";
+    return to_human_round (x * 1e6) + "µ";
 
   if (ax >= 1e-9)
-    return fmt (x * 1e9) + "n";
+    return to_human_round (x * 1e9) + "n";
 
-  return fmt (x * 1e12) + "p";
+  return to_human_round (x * 1e12) + "p";
 }
 
 
@@ -633,23 +633,16 @@ to_human (spatial_unit x)
   const double ax = std::abs (km);
 
   if (ax >= 0.1 * spatial_unit::KPC)
-    return fmt (km / spatial_unit::KPC) + " kpc";
+    return to_human_round (km / spatial_unit::KPC) + " kpc";
 
   if (ax >= 0.1 * spatial_unit::LY)
-    return fmt (km / spatial_unit::LY) + " ly";
+    return to_human_round (km / spatial_unit::LY) + " ly";
 
   if (ax >= 0.1 * spatial_unit::AU)
-    return fmt (km / spatial_unit::AU) + " AU";
+    return to_human_round (km / spatial_unit::AU) + " AU";
 
-  return fmt (km) + " km";
+  return to_human_round (km) + " km";
 }
-
-
-// sf::String
-// to_sf_string (const std::string &s)
-// {
-//   return sf::String::fromUtf8 (s.begin (), s.end ());
-// }
 
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -844,6 +837,9 @@ struct Cache
 };
 
 
+// ----------------------------------------------------------------------------
+
+
 Cache::Cache (const Camera &camera)
 {
   const double r_rad = RAD (camera.ra);
@@ -878,6 +874,9 @@ Cache::Cache (const Camera &camera)
   scale_y  = -0.5 * WH / half_h;
   offset_y =  0.5 * WH;
 }
+
+
+// ----------------------------------------------------------------------------
 
 
 inline bool
@@ -919,28 +918,36 @@ struct Mouse
   sf::Vector2i delta{ 0, 0 };
 
   void
-  update (const sf::RenderWindow &window)
-  {
-    position = sf::Mouse::getPosition (window);
-
-    delta = position - previous;
-
-    // NOTE: Wrapping logic is necessary for calculating precise mouse delta.
-    if (position.x >= X_MAX)
-      sf::Mouse::setPosition ({ X_MIN + 1, position.y }, window);
-
-    if (position.x <= X_MIN)
-      sf::Mouse::setPosition ({ X_MAX - 1, position.y }, window);
-
-    if (position.y >= Y_MAX)
-      sf::Mouse::setPosition ({ position.x, Y_MIN + 1 }, window);
-
-    if (position.y <= Y_MIN)
-      sf::Mouse::setPosition ({ position.x, Y_MAX - 1 }, window);
-
-    previous = sf::Mouse::getPosition (window);
-  }
+  update (const sf::RenderWindow &window);
 };
+
+
+
+// ----------------------------------------------------------------------------
+
+
+void
+Mouse::update (const sf::RenderWindow &window)
+{
+  position = sf::Mouse::getPosition (window);
+
+  delta = position - previous;
+
+  // NOTE: Wrapping logic is necessary for calculating precise mouse delta.
+  if (position.x >= X_MAX)
+    sf::Mouse::setPosition ({ X_MIN + 1, position.y }, window);
+
+  if (position.x <= X_MIN)
+    sf::Mouse::setPosition ({ X_MAX - 1, position.y }, window);
+
+  if (position.y >= Y_MAX)
+    sf::Mouse::setPosition ({ position.x, Y_MIN + 1 }, window);
+
+  if (position.y <= Y_MIN)
+    sf::Mouse::setPosition ({ position.x, Y_MAX - 1 }, window);
+
+  previous = sf::Mouse::getPosition (window);
+}
 
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -954,7 +961,8 @@ layout (location = 1) in vec4 a_color;
 
 out vec4 v_color;
 
-void main ()
+void
+main ()
 {
   gl_Position = vec4 (a_position, 0.0, 1.0);
 
@@ -970,7 +978,8 @@ in vec4 v_color;
 
 out vec4 f_color;
 
-void main ()
+void
+main ()
 {
   f_color = v_color;
 }
@@ -988,7 +997,8 @@ layout (location = 1) in vec2 a_uv;
 
 out vec2 v_uv;
 
-void main ()
+void
+main ()
 {
   gl_Position = vec4 (a_position, 0.0, 1.0);
 
@@ -1006,7 +1016,8 @@ in vec2 v_uv;
 
 out vec4 f_color;
 
-void main ()
+void
+main ()
 {
   f_color = texture2D (u_texture, v_uv);
 }
@@ -1022,7 +1033,8 @@ constexpr const char *VS_BLUR = R"(
 
 layout (location = 0) in vec2 a_position;
 
-void main ()
+void
+main ()
 {
   gl_Position = vec4 (a_position, 0.0, 1.0);
 }
@@ -1037,7 +1049,8 @@ uniform sampler2D u_texture;
 uniform vec2 u_direction;
 uniform vec2 u_texel;
 
-void main()
+void
+main ()
 {
   vec2 uv   = gl_FragCoord.xy * u_texel;
   vec2 step = u_direction * u_texel;
@@ -1220,9 +1233,6 @@ struct Text : sf::Text
 
   void
   place (float px, float py, float mx, float my);
-
-  sf::RectangleShape
-  background () const;
 };
 
 
@@ -1265,20 +1275,6 @@ Text::place (float px, float py, float mx, float my)
 }
 
 
-sf::RectangleShape
-Text::background () const
-{
-  const auto bounds = getLocalBounds ();
-
-  sf::RectangleShape shape;
-
-  shape.setPosition ({ bounds.left, bounds.top });
-  shape.setSize ({ bounds.width, bounds.height });
-
-  return shape;
-}
-
-
 ///////////////////////////////////////////////////////////////////////////////
 
 
@@ -1313,8 +1309,9 @@ main (int argc, char **argv)
 
   sf::ContextSettings settings{ 24, 8, 8, 3 /* major */, 3 /* minor */ };
 
-  sf::RenderWindow window{ mode, "Gaia Explorer", sf::Style::Titlebar, settings };
+  sf::RenderWindow window{ mode, "Gaia Explorer", sf::Style::Fullscreen, settings };
 
+  /*
   sf::VideoMode desktop = sf::VideoMode::getDesktopMode ();
 
   const int SW = desktop.width;
@@ -1324,6 +1321,7 @@ main (int argc, char **argv)
     SW / 2 - WW / 2,
     SH / 2 - WH / 2
   });
+  */
 
   window.setVerticalSyncEnabled (VSYNC);
   window.setMouseCursorGrabbed (true);
@@ -1365,9 +1363,9 @@ main (int argc, char **argv)
   Text text_camera (font, 16);
   Text text_speed (font, 16);
 
-  text_file.setFillColor ({ 64, 64, 64 });
-  text_camera.setFillColor ({ 64, 64, 64 });
-  text_speed.setFillColor ({ 64, 96, 128 });
+  text_file.setFillColor ({ 128, 128, 128 });
+  text_camera.setFillColor ({ 128, 128, 128 });
+  text_speed.setFillColor ({ 128, 196, 255 });
 
   text_file.write (std::to_string (N_STARS) + " stars imported\n" + file);
 
@@ -1384,15 +1382,6 @@ main (int argc, char **argv)
   double fov_target = camera.fov;
 
   auto camera_speed = spatial_unit::from_ly (1);
-
-  /////////////////////////////////////////////////////////////////////////////
-
-  sf::VertexArray points (sf::Points);
-
-  points.resize (N_STARS);
-
-  for (size_t i = 0; i < N_STARS; ++i)
-    points[i].color = stars[i].tint;
 
   /////////////////////////////////////////////////////////////////////////////
 
@@ -1792,13 +1781,13 @@ main (int argc, char **argv)
       if (gui)
         {
           if (dt < 1.0 / 60.0)
-            text_perf.setFillColor(sf::Color{ 32, 128, 32 });
+            text_perf.setFillColor(sf::Color{ 32, 196, 32 });
           else if (dt < 1.0 / 30.0)
-            text_perf.setFillColor(sf::Color{ 128, 64, 32 });
+            text_perf.setFillColor(sf::Color{ 196, 128, 32 });
           else
-            text_perf.setFillColor(sf::Color{ 128, 32, 32 });
+            text_perf.setFillColor(sf::Color{ 196, 32, 32 });
 
-          text_perf.write (to_human (dt) + "s " + fmt (1.0f / dt) + " fps");
+          text_perf.write (to_human (dt) + "s " + to_human_round (1.0f / dt) + " fps");
           text_perf.place (10, 10);
           window.draw (text_perf);
 
@@ -1810,9 +1799,9 @@ main (int argc, char **argv)
           // ------------------------------------------------------------------
 
           text_camera.write (
-            "Ra "  + fmt (camera.ra)  + "°\n" +
-            "Dec " + fmt (camera.dec) + "°\n" +
-            "FOV " + fmt (camera.fov) + "°"
+            "Ra "  + to_human_round (camera.ra)  + "°\n" +
+            "Dec " + to_human_round (camera.dec) + "°\n" +
+            "FOV " + to_human_round (camera.fov) + "°"
           );
           text_camera.place (WW - 10, WH - 10, 1, 1);
           window.draw (text_camera);
@@ -1849,8 +1838,6 @@ main (int argc, char **argv)
 
   glDeleteVertexArrays (1, &vao);
   glDeleteBuffers (1, &vbo);
-
-  // delete[] vertices;
 
   std::cout << "Goodbye.\n";
 }

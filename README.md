@@ -53,17 +53,17 @@ make
 | `R` | ×10 camera speed |
 | `F` | ÷10 camera speed |
 | `C` | Set camera speed to `1c` *(speed of light)* |
-| `MW Up` | Increase camera speed |
-| `MW Down` | Decrease camera speed |
-| `MB Right` + `MW Up` | Zoom in |
-| `MB Right` + `MW Down` | Zoom out |
+| `Scroll Up` | Increase camera speed |
+| `Scroll Down` | Decrease camera speed |
+| `Right Click` + `Scroll Up` | Zoom in |
+| `Right Click` + `Scroll Down` | Zoom out |
 
 
 ## Implementation
 
 Star positions are converted to Cartesian coordinates centered on the Sun (`0,0,0`), derived from Gaia right ascension, declination and parallax measurements.
 
-Positions are stored as a 64-bit signed integer in kilometers. This allows 1 km precision, while being able to represent coordinates from -298.909 *(-974'911 ly)* to 298.909 kpc *(974'911 ly)*.
+Positions are stored as a 64-bit signed integer in kilometers. This allows 1 km precision, while being able to represent coordinates from -298.909 kpc *(-974'911 ly)* to 298.909 kpc *(974'911 ly)*.
 
 ## Performance
 
