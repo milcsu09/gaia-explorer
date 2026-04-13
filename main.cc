@@ -11,20 +11,19 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 
-#if 0
-constexpr int WW = 800;
-constexpr int WH = 600;
-#else
-constexpr int WW = 1920;
-constexpr int WH = 1080;
-#endif
-
-
-constexpr double ASPECT = static_cast<double> (WW) / static_cast<double> (WH);
-
-
 constexpr bool VSYNC      = false;
 constexpr bool SHOW_MOUSE = false;
+
+
+// ----------------------------------------------------------------------------
+
+
+static int WW;
+static int WH;
+static double ASPECT;
+
+
+// constexpr double ASPECT = static_cast<double> (WW) / static_cast<double> (WH);
 
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -467,11 +466,6 @@ struct Camera
 
 struct Mouse
 {
-  static constexpr int X_MIN = 0;
-  static constexpr int Y_MIN = 0;
-  static constexpr int X_MAX = WW - 1;
-  static constexpr int Y_MAX = WH - 1;
-
   sf::Vector2i position{ 0, 0 };
   sf::Vector2i previous{ 0, 0 };
 
@@ -491,6 +485,11 @@ Mouse::update (const sf::RenderWindow &window)
   position = sf::Mouse::getPosition (window);
 
   delta = position - previous;
+
+  static const int X_MIN = 0;
+  static const int Y_MIN = 0;
+  static const int X_MAX = WW - 1;
+  static const int Y_MAX = WH - 1;
 
   // NOTE: Wrapping logic is necessary for calculating precise mouse delta.
   if (position.x >= X_MAX)
@@ -891,17 +890,34 @@ main (int argc, char **argv)
 
   /////////////////////////////////////////////////////////////////////////////
 
-  sf::VideoMode mode{ WW, WH };
-
-  sf::ContextSettings settings{ 24, 8, 8, 3 /* major */, 3 /* minor */ };
-
-  sf::RenderWindow window{ mode, "Gaia Explorer", sf::Style::Fullscreen, settings };
-
-  /*
   sf::VideoMode desktop = sf::VideoMode::getDesktopMode ();
 
-  const int SW = desktop.width;
-  const int SH = desktop.height;
+  WW = desktop.width;
+  WH = desktop.height;
+
+  ASPECT = static_cast<double> (WW) / static_cast<double> (WH);
+
+  sf::VideoMode mode{
+    static_cast<unsigned> (WW),
+    static_cast<unsigned> (WH)
+  };
+
+  sf::ContextSettings settings{
+    24,
+    8,
+    8,
+    3 /* major */,
+    3 /* minor */
+  };
+
+  sf::RenderWindow window{
+    mode,
+    "Gaia Explorer",
+    sf::Style::Fullscreen,
+    settings
+  };
+
+  /*
 
   window.setPosition ({
     SW / 2 - WW / 2,
@@ -963,7 +979,7 @@ main (int argc, char **argv)
 
   double fov_target = camera.fov;
 
-  auto camera_speed = 1.0;
+  double camera_speed = 1.0 * PC_PER_LY;
 
   /////////////////////////////////////////////////////////////////////////////
 
@@ -1132,8 +1148,6 @@ main (int argc, char **argv)
             else
               {
                 if (event.mouseWheelScroll.delta > 0)
-                  // Magic = (2^63 - 1) / 1.5
-                  // if (camera_speed < spatial_unit::from_km (6148914691236516864))
                   camera_speed *= 1.5;
 
                 if (event.mouseWheelScroll.delta < 0)
@@ -1355,11 +1369,11 @@ main (int argc, char **argv)
       if (gui)
         {
           if (dt < 1.0 / 60.0)
-            text_perf.setFillColor(sf::Color{ 32, 196, 32 });
+            text_perf.setFillColor (sf::Color{ 32, 196, 32 });
           else if (dt < 1.0 / 30.0)
-            text_perf.setFillColor(sf::Color{ 196, 128, 32 });
+            text_perf.setFillColor (sf::Color{ 196, 128, 32 });
           else
-            text_perf.setFillColor(sf::Color{ 196, 32, 32 });
+            text_perf.setFillColor (sf::Color{ 196, 32, 32 });
 
           text_perf.write (to_human (dt) + "s " + to_human_round (1.0f / dt, 1) + " fps");
           text_perf.place (10, 10);
@@ -1373,6 +1387,7 @@ main (int argc, char **argv)
           // ------------------------------------------------------------------
 
           text_camera.write (
+            "D0 " + to_human_round (std::sqrt (dot (camera.position, camera.position)), 1) + "pc\n"
             "FOV " + to_human_round (camera.fov, 1) + "°"
           );
           text_camera.place (WW - 10, WH - 10, 1, 1);

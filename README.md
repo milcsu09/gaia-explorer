@@ -65,9 +65,7 @@ make
 
 Star positions are converted to Cartesian coordinates centered on the Sun (`0,0,0`), derived from Gaia right ascension, declination and parallax measurements.
 
-Positions are stored as floating point numbers. This makes it easy to project stars to the screen using a shader program.
-
-This also means that the further a coordinate is from `0,0,0`, the less-precise it is. Since each coordinate is stored in parsecs, it is unlikely to cause visual artifacts.
+Positions are stored as floating-point numbers, which makes it easy to project stars to the screen using a shader program. This means positional precision decreases with distance from the origin, but this is not a practical concern for one reason: **Gaia's parallax precision degrades faster.** At distances of thousands of parsecs, parallax uncertainty already introduces more positional error than floating-point imprecision ever would.
 
 ## Performance
 
