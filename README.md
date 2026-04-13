@@ -41,13 +41,15 @@ make
 |-|-|
 | `ESC` | Quit |
 | `F1` | Toggle GUI |
-| `0` or `Home` | Teleport to `0,0,0` |
+| `0` or `Home` | Teleport to Sun (`0,0,0`) |
 | `W` | Move forward |
 | `S` | Move backward |
 | `A` | Move left |
 | `D` | Move right |
 | `Space` | Move up |
 | `Control` | Move down |
+| `Q` | Roll camera left |
+| `E` | Roll camera right |
 | `+` | Increase camera exposure |
 | `-` | Decrease camera exposure |
 | `R` | ×10 camera speed |
@@ -63,9 +65,11 @@ make
 
 Star positions are converted to Cartesian coordinates centered on the Sun (`0,0,0`), derived from Gaia right ascension, declination and parallax measurements.
 
-Positions are stored as a 64-bit signed integer in kilometers. This allows 1 km precision, while being able to represent coordinates from -298.909 kpc *(-974'911 ly)* to 298.909 kpc *(974'911 ly)*.
+Positions are stored as floating point numbers. This makes it easy to project stars to the screen using a shader program.
+
+This also means that the further a coordinate is from `0,0,0`, the less-precise it is. Since each coordinate is stored in parsecs, it is unlikely to cause visual artifacts.
 
 ## Performance
 
-On my system *(AMD Ryzen 5 3600, NVIDIA GeForce GTX 1650)*, the application renders 1'000'000 stars in real time with a peak frame time of \~11 ms (\~90 FPS).
+On my system *(AMD Ryzen 5 3600, NVIDIA GeForce GTX 1650)*, the application renders 1'000'000 stars in real time with a peak frame time of \~6 ms (\~166 FPS).
 

@@ -5,6 +5,7 @@
 #include <fstream>
 #include <sstream>
 #include <cmath>
+#include <cstddef> 
 
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -17,6 +18,9 @@ constexpr int WH = 600;
 constexpr int WW = 1920;
 constexpr int WH = 1080;
 #endif
+
+
+constexpr double ASPECT = static_cast<double> (WW) / static_cast<double> (WH);
 
 
 constexpr bool VSYNC      = false;
@@ -36,6 +40,12 @@ static constexpr double PI_4 = 0.78539816339744830962;
 
 static constexpr double SOL = 299'792.0 /* km/h */;
 
+static constexpr double PC_PER_LY = 0.306601;
+static constexpr double PC_PER_AU = 4.84813681e-6;
+static constexpr double KM_PER_PC = 3.085677581e13;
+
+static constexpr double SOL_PC_S = SOL / KM_PER_PC;
+
 
 inline double
 clamp (double x, double a, double b)
@@ -53,526 +63,123 @@ clamp (double x, double a, double b)
 ///////////////////////////////////////////////////////////////////////////////
 
 
-using kilometer = int64_t;
-
-
-// ----------------------------------------------------------------------------
-
-
-class spatial_unit
+struct vec3
 {
-private:
-  kilometer m_value{ 0 };
+  double x;
+  double y;
+  double z;
 
-public:
-  static constexpr kilometer AU  =            149'597'871 /* km */;
-  static constexpr kilometer LY  =      9'460'730'472'581 /* km */;
-  static constexpr kilometer PC  =     30'856'775'814'914 /* km */;
-  static constexpr kilometer KPC = 30'856'775'814'914'000 /* km */;
+  vec3
+  operator+ (vec3 b) const;
 
-  spatial_unit () = default;
+  vec3
+  operator- (vec3 b) const;
 
-  spatial_unit (kilometer value);
+  vec3
+  operator* (double s) const;
 
-  static spatial_unit
-  from_km (kilometer value);
+  vec3
+  operator/ (double s) const;
 
-  static spatial_unit
-  from_au (double value);
+  vec3 &
+  operator+= (vec3 b);
 
-  static spatial_unit
-  from_ly (double value);
-
-  static spatial_unit
-  from_pc (double value);
-
-  static spatial_unit
-  from_kpc (double value);
-
-  kilometer
-  to_km () const;
-
-  double
-  to_au () const;
-
-  double
-  to_ly () const;
-
-  double
-  to_pc () const;
-
-  double
-  to_kpc () const;
-
-  bool
-  operator== (const spatial_unit &other) const;
-
-  bool
-  operator!= (const spatial_unit &other) const;
-
-  bool
-  operator< (const spatial_unit &other) const;
-
-  bool
-  operator> (const spatial_unit &other) const;
-
-  bool
-  operator<= (const spatial_unit &other) const;
-
-  bool
-  operator>= (const spatial_unit &other) const;
-
-  spatial_unit
-  operator+ (const spatial_unit &other) const;
-
-  spatial_unit
-  operator- () const;
-
-  spatial_unit
-  operator- (const spatial_unit &other) const;
-
-  spatial_unit
-  operator* (double scalar) const;
-
-  spatial_unit
-  operator/ (double scalar) const;
-
-  spatial_unit &
-  operator+= (const spatial_unit &other);
-
-  spatial_unit &
-  operator-= (const spatial_unit &other);
-
-  spatial_unit &
-  operator*= (double scalar);
-
-  spatial_unit &
-  operator/= (double scalar);
-
-  friend spatial_unit
-  operator* (double scalar, const spatial_unit &unit);
+  vec3 &
+  operator-= (vec3 b);
 };
 
 
 // ----------------------------------------------------------------------------
 
 
-spatial_unit::spatial_unit (kilometer value)
-  : m_value (value)
+vec3
+vec3::operator+ (vec3 b) const
 {
+  return {
+    x + b.x,
+    y + b.y,
+    z + b.z
+  };
 }
 
 
-spatial_unit
-spatial_unit::from_km (kilometer value)
+vec3
+vec3::operator- (vec3 b) const
 {
-  return spatial_unit (value);
+  return {
+    x - b.x,
+    y - b.y,
+    z - b.z
+  };
 }
 
 
-spatial_unit
-spatial_unit::from_au (double value)
+vec3
+vec3::operator* (double s) const
 {
-  return spatial_unit (std::llround (value * AU));
+  return {
+    x * s,
+    y * s,
+    z * s
+  };
 }
 
 
-spatial_unit
-spatial_unit::from_ly (double value)
+vec3
+vec3::operator/ (double s) const
 {
-  return spatial_unit (std::llround (value * LY));
+  const double inv_s = 1.0 / s;
+
+  return {
+    x * inv_s,
+    y * inv_s,
+    z * inv_s
+  };
 }
 
 
-spatial_unit
-spatial_unit::from_pc (double value)
+vec3 &
+vec3::operator+= (vec3 b)
 {
-  return spatial_unit (std::llround (value * PC));
-}
-
-
-spatial_unit
-spatial_unit::from_kpc (double value)
-{
-  return spatial_unit (std::llround (value * KPC));
-}
-
-
-kilometer
-spatial_unit::to_km () const
-{
-  return m_value;
-}
-
-
-double
-spatial_unit::to_au () const
-{
-  return static_cast<double> (m_value) / AU;
-}
-
-
-double
-spatial_unit::to_ly () const
-{
-  return static_cast<double> (m_value) / LY;
-}
-
-
-double
-spatial_unit::to_pc () const
-{
-  return static_cast<double> (m_value) / PC;
-}
-
-
-double
-spatial_unit::to_kpc () const
-{
-  return static_cast<double> (m_value) / KPC;
-}
-
-
-bool
-spatial_unit::operator== (const spatial_unit &other) const
-{
-  return m_value == other.m_value;
-}
-
-
-bool
-spatial_unit::operator!= (const spatial_unit &other) const
-{
-  return m_value != other.m_value;
-}
-
-
-bool
-spatial_unit::operator< (const spatial_unit &other) const
-{
-  return m_value < other.m_value;
-}
-
-
-bool
-spatial_unit::operator> (const spatial_unit &other) const
-{
-  return m_value > other.m_value;
-}
-
-
-bool
-spatial_unit::operator<= (const spatial_unit &other) const
-{
-  return m_value <= other.m_value;
-}
-
-
-bool
-spatial_unit::operator>= (const spatial_unit &other) const
-{
-  return m_value >= other.m_value;
-}
-
-
-spatial_unit
-spatial_unit::operator+ (const spatial_unit &other) const
-{
-  return spatial_unit (m_value + other.m_value);
-}
-
-
-spatial_unit
-spatial_unit::operator- () const
-{
-  return spatial_unit (0 - m_value);
-}
-
-
-spatial_unit
-spatial_unit::operator- (const spatial_unit &other) const
-{
-  return spatial_unit (m_value - other.m_value);
-}
-
-
-spatial_unit
-spatial_unit::operator* (double scalar) const
-{
-  return spatial_unit (std::llround (m_value * scalar));
-}
-
-
-spatial_unit
-spatial_unit::operator/ (double scalar) const
-{
-  return spatial_unit (std::llround (m_value / scalar));
-}
-
-
-spatial_unit &
-spatial_unit::operator+= (const spatial_unit &other)
-{
-  m_value = m_value + other.m_value;
+  x += b.x;
+  y += b.y;
+  z += b.z;
   return *this;
 }
 
 
-spatial_unit &
-spatial_unit::operator-= (const spatial_unit &other)
+vec3 &
+vec3::operator-= (vec3 b)
 {
-  m_value = m_value - other.m_value;
+  x -= b.x;
+  y -= b.y;
+  z -= b.z;
   return *this;
 }
 
 
-spatial_unit &
-spatial_unit::operator*= (double scalar)
+inline double
+dot (vec3 a, vec3 b)
 {
-  m_value = std::llround (m_value * scalar);
-  return *this;
+  return a.x * b.x + a.y * b.y + a.z * b.z;
 }
 
 
-spatial_unit &
-spatial_unit::operator/= (double scalar)
+inline vec3
+normalize (vec3 a)
 {
-  m_value = std::llround (m_value / scalar);
-  return *this;
+  return a / std::sqrt (dot (a, a));
 }
 
 
-spatial_unit
-operator* (double scalar, const spatial_unit &unit)
+inline vec3
+cross (vec3 a, vec3 b)
 {
-  return unit * scalar;
-}
-
-
-///////////////////////////////////////////////////////////////////////////////
-
-
-template <typename T> struct vector3
-{
-  static const vector3<T> ZERO;
-
-  T x{ 0 }, y{ 0 }, z{ 0 };
-
-  vector3 () = default;
-
-  vector3 (T v);
-
-  vector3 (T _x, T _y, T _z);
-
-  vector3 (const vector3<T> &other);
-
-  vector3 (vector3<T> &&other) noexcept;
-
-  vector3<T> &
-  operator= (const vector3<T> &other);
-
-  vector3<T> &
-  operator= (vector3<T> &&other) noexcept;
-
-  std::common_type_t<T, double>
-  distance (const vector3<T> &other) const;
-
-  vector3<T>
-  operator+ (const vector3<T> &other) const;
-
-  vector3<T>
-  operator- (const vector3<T> &other) const;
-
-  vector3<T>
-  operator* (double scalar) const;
-
-  vector3<T>
-  operator/ (double scalar) const;
-
-  vector3<T> &
-  operator+= (const vector3<T> &other);
-
-  vector3<T> &
-  operator-= (const vector3<T> &other);
-
-  vector3<T> &
-  operator*= (double scalar);
-
-  vector3<T> &
-  operator/= (double scalar);
-
-  template <typename U>
-  friend vector3<U>
-  operator* (double scalar, const vector3<U> &v);
-};
-
-
-// ----------------------------------------------------------------------------
-
-
-typedef vector3<int64_t> vector3i;
-
-typedef vector3<double> vector3f;
-
-typedef vector3<spatial_unit> vector3su;
-
-
-// ----------------------------------------------------------------------------
-
-
-template <typename T> const vector3<T> vector3<T>::ZERO{ 0, 0, 0 };
-
-
-template <typename T>
-vector3<T>::vector3 (T v)
-  : x (v),
-    y (v),
-    z (v)
-{
-}
-
-
-template <typename T>
-vector3<T>::vector3 (T _x, T _y, T _z)
-  : x (_x),
-    y (_y),
-    z (_z)
-{
-}
-
-
-template <typename T>
-vector3<T>::vector3 (const vector3<T> &other)
-  : x (other.x),
-    y (other.y),
-    z (other.z)
-{
-}
-
-
-template <typename T>
-vector3<T>::vector3 (vector3<T> &&other) noexcept
-  : x (std::move (other.x)),
-    y (std::move (other.y)),
-    z (std::move (other.z))
-{
-}
-
-
-template <typename T>
-vector3<T> &
-vector3<T>::operator= (const vector3<T> &other)
-{
-  x = other.x;
-  y = other.y;
-  z = other.z;
-  return *this;
-}
-
-
-template <typename T>
-vector3<T> &
-vector3<T>::operator= (vector3<T> &&other) noexcept
-{
-  x = std::move (other.x);
-  y = std::move (other.y);
-  z = std::move (other.z);
-  return *this;
-}
-
-
-template <typename T>
-std::common_type_t<T, double>
-vector3<T>::distance (const vector3<T> &other) const
-{
-  const auto dx = x - other.x;
-  const auto dy = y - other.y;
-  const auto dz = z - other.z;
-  return std::sqrt (dx * dx + dy * dy + dz * dz);
-}
-
-
-template <typename T>
-vector3<T>
-vector3<T>::operator+ (const vector3<T> &other) const
-{
-  return vector3 (x + other.x, y + other.y, z + other.z);
-}
-
-
-template <typename T>
-vector3<T>
-vector3<T>::operator- (const vector3<T> &other) const
-{
-  return vector3 (x - other.x, y - other.y, z - other.z);
-}
-
-
-template <typename T>
-vector3<T>
-vector3<T>::operator* (double scalar) const
-{
-  return vector3 (x * scalar, y * scalar, z * scalar);
-}
-
-
-template <typename T>
-vector3<T>
-vector3<T>::operator/ (double scalar) const
-{
-  return vector3 (x / scalar, y / scalar, z / scalar);
-}
-
-
-template <typename T>
-vector3<T> &
-vector3<T>::operator+= (const vector3<T> &other)
-{
-  x += other.x;
-  y += other.y;
-  z += other.z;
-  return *this;
-}
-
-
-template <typename T>
-vector3<T> &
-vector3<T>::operator-= (const vector3<T> &other)
-{
-  x -= other.x;
-  y -= other.y;
-  z -= other.z;
-  return *this;
-}
-
-
-template <typename T>
-vector3<T> &
-vector3<T>::operator*= (double scalar)
-{
-  x *= scalar;
-  y *= scalar;
-  z *= scalar;
-  return *this;
-}
-
-
-template <typename T>
-vector3<T> &
-vector3<T>::operator/= (double scalar)
-{
-  x /= scalar;
-  y /= scalar;
-  z /= scalar;
-  return *this;
-}
-
-
-template <typename T>
-vector3<T>
-operator* (double scalar, const vector3<T> &v)
-{
-  return v * scalar;
+  return {
+    a.y * b.z - a.z * b.y,
+    a.z * b.x - a.x * b.z,
+    a.x * b.y - a.y * b.x
+  };
 }
 
 
@@ -580,80 +187,120 @@ operator* (double scalar, const vector3<T> &v)
 
 
 static std::string
-to_human_round (double v)
+to_human_round (double d, int n)
 {
   char buffer[256];
 
-  std::snprintf (buffer, sizeof buffer, "%.1f", v);
+  std::snprintf (buffer, sizeof buffer, "%.*f", n, d);
 
   return buffer;
 };
 
 
 std::string
-to_human (double x)
+separate_with (std::string s, char sep = ',')
 {
-  if (x == 0)
-    return to_human_round (x);
+  int insert_pos = s.length () - 3;
 
-  const auto ax = std::abs (x);
+  while (insert_pos > 0)
+    {
+      s.insert(insert_pos, 1, sep);
+      insert_pos -= 3;
+    }
 
-  if (ax >= 1e12)
-    return to_human_round (x * 1e-12) + "T";
-
-  if (ax >= 1e9)
-    return to_human_round (x * 1e-9) + "G";
-
-  if (ax >= 1e6)
-    return to_human_round (x * 1e-6) + "M";
-
-  if (ax >= 1e3)
-    return to_human_round (x * 1e-3) + "k";
-
-  if (ax >= 1)
-    return to_human_round (x);
-
-  if (ax >= 1e-3)
-    return to_human_round (x * 1e3) + "m";
-
-  if (ax >= 1e-6)
-    return to_human_round (x * 1e6) + "µ";
-
-  if (ax >= 1e-9)
-    return to_human_round (x * 1e9) + "n";
-
-  return to_human_round (x * 1e12) + "p";
+  return s;
 }
 
 
 std::string
-to_human (spatial_unit x)
+separate (int64_t n, char sep = ',')
 {
-  const double km = static_cast<double> (x.to_km ());
-  const double ax = std::abs (km);
+  return separate_with (std::to_string (n), sep);
+}
 
-  if (ax >= 0.1 * spatial_unit::KPC)
-    return to_human_round (km / spatial_unit::KPC) + " kpc";
 
-  if (ax >= 0.1 * spatial_unit::LY)
-    return to_human_round (km / spatial_unit::LY) + " ly";
+std::string
+separate (uint64_t n, char sep = ',')
+{
+  return separate_with (std::to_string (n), sep);
+}
 
-  if (ax >= 0.1 * spatial_unit::AU)
-    return to_human_round (km / spatial_unit::AU) + " AU";
 
-  return to_human_round (km) + " km";
+std::string
+separate (double d, int n, char sep = ',')
+{
+  const std::string s = to_human_round (d, n);
+
+  auto pos = s.find ('.');
+
+  if (pos == std::string::npos)
+    return separate_with (s, sep);
+
+  const std::string integer = s.substr (0, pos);
+  const std::string fraction = s.substr (pos);
+
+  return separate_with (integer, sep) + fraction;
+}
+
+
+std::string
+to_human (double x)
+{
+  if (x == 0)
+    return separate (x, 1);
+
+  const auto ax = std::abs (x);
+
+  if (ax >= 1e12)
+    return separate (x * 1e-12, 1) + "T";
+
+  if (ax >= 1e9)
+    return separate (x * 1e-9, 1) + "G";
+
+  if (ax >= 1e6)
+    return separate (x * 1e-6, 1) + "M";
+
+  if (ax >= 1e3)
+    return separate (x * 1e-3, 1) + "k";
+
+  if (ax >= 1)
+    return separate (x, 1);
+
+  if (ax >= 1e-3)
+    return separate (x * 1e3, 1) + "m";
+
+  if (ax >= 1e-6)
+    return separate (x * 1e6, 1) + "µ";
+
+  if (ax >= 1e-9)
+    return separate (x * 1e9, 1) + "n";
+
+  return separate (x * 1e12, 1) + "p";
+}
+
+
+std::string
+to_human_speed (double v_pc_s)
+{
+  const double ax = std::abs (v_pc_s);
+
+  if (ax >= 0.1 * PC_PER_LY)
+    return separate (v_pc_s / PC_PER_LY, 1) + " ly/s";
+
+  if (ax >= 0.1 * PC_PER_AU)
+    return separate (v_pc_s / PC_PER_AU, 1) + " AU/s";
+
+  return separate (v_pc_s * KM_PER_PC, 0) + " km/s";
 }
 
 
 ///////////////////////////////////////////////////////////////////////////////
 
 
-sf::Color
-temperature_to_color (double temp)
+void
+temperature_to_color (double temp, float &r, float &g, float &b)
 {
   double T = temp / 100.0;
-
-  double r, g, b;
 
   // Red
   if (T <= 66)
@@ -674,17 +321,10 @@ temperature_to_color (double temp)
     b = 0;
   else
     b = 138.5177312231 * log (T - 10) - 305.0447927307;
-
-  return {
-    static_cast<sf::Uint8> (clamp (r, 0.0, 255.0)),
-    static_cast<sf::Uint8> (clamp (g, 0.0, 255.0)),
-    static_cast<sf::Uint8> (clamp (b, 0.0, 255.0)),
-  };
 }
 
 
 ///////////////////////////////////////////////////////////////////////////////
-
 
 
 struct Gaia_Star
@@ -735,16 +375,11 @@ Gaia_Star::Gaia_Star (std::string line)
 
 struct Star
 {
-  // vector3su position;
+  float p[3];
 
-  double x /* pc */;
-  double y /* pc */;
-  double z /* pc */;
+  float lum;
 
-  double lum;
-  double teff;
-
-  sf::Color tint;
+  float t[3];
 
   Star () = default;
 
@@ -757,22 +392,24 @@ struct Star
 
 Star::Star (Gaia_Star gaia_star)
 {
-  if (gaia_star.parallax <= 0.0)
-    return;
-
   double r_rad = RAD (gaia_star.ra);
   double d_rad = RAD (gaia_star.dec);
 
   double distance_pc = 1000.0 / gaia_star.parallax;
 
-  x = distance_pc * std::cos (d_rad) * std::cos (r_rad);
-  y = distance_pc * std::cos (d_rad) * std::sin (r_rad);
-  z = distance_pc * std::sin (d_rad);
+  p[0] = distance_pc * std::cos (d_rad) * std::cos (r_rad);
+  p[1] = distance_pc * std::cos (d_rad) * std::sin (r_rad);
+  p[2] = distance_pc * std::sin (d_rad);
 
   lum  = gaia_star.lum_flame;
-  teff = gaia_star.teff_gspphot;
 
-  tint = temperature_to_color (teff);
+  float r, g, b;
+
+  temperature_to_color (gaia_star.teff_gspphot, r, g, b);
+
+  t[0] = r / 255.0f;
+  t[1] = g / 255.0f;
+  t[2] = b / 255.0f;
 }
 
 
@@ -780,7 +417,7 @@ Star::Star (Gaia_Star gaia_star)
 
 
 bool
-import_gaia (std::vector<Star> &stars, const std::string &path)
+import_gaia (std::vector<Gaia_Star> &stars, const std::string &path)
 {
   std::ifstream file (path);
 
@@ -792,7 +429,7 @@ import_gaia (std::vector<Star> &stars, const std::string &path)
   std::getline (file, line); // Header
 
   while (std::getline (file, line))
-    stars.emplace_back (/* Star{} */ Gaia_Star (line));
+    stars.emplace_back (Gaia_Star (line));
 
   if (file.bad ())
     return false;
@@ -809,97 +446,20 @@ import_gaia (std::vector<Star> &stars, const std::string &path)
 
 struct Camera
 {
-  vector3su position;
-  double ra  /* degree */;
-  double dec /* degree */;
-  double fov /* degree */;
+  vec3 position{
+    0.0 /* pc */,
+    0.0 /* pc */,
+    0.0 /* pc */
+  };
+
+  vec3 forward { 1,  0, 0 };
+  vec3 right   { 0, -1, 0 };
+  vec3 up      { 0,  0, 1 };
+
+  double fov  /* degree */;
 
   double exposure{ 1.0 / 16.0 };
 };
-
-
-///////////////////////////////////////////////////////////////////////////////
-
-
-struct Cache
-{
-  double r0x, r0y;
-  double r1x, r1y, r1z;
-  double r2x, r2y, r2z;
-
-  double scale_x, offset_x;
-  double scale_y, offset_y;
-
-  double aspect;
-  double inv_half_h;
-
-  Cache (const Camera &camera);
-};
-
-
-// ----------------------------------------------------------------------------
-
-
-Cache::Cache (const Camera &camera)
-{
-  const double r_rad = RAD (camera.ra);
-  const double d_rad = RAD (camera.dec);
-
-  const double r_sin = std::sin (r_rad);
-  const double r_cos = std::cos (r_rad);
-
-  const double d_sin = std::sin (d_rad);
-  const double d_cos = std::cos (d_rad);
-
-  r0x =  r_sin;
-  r0y = -r_cos;
-
-  r1x = -d_sin * r_cos;
-  r1y = -d_sin * r_sin;
-  r1z =  d_cos;
-
-  r2x =  d_cos * r_cos;
-  r2y =  d_cos * r_sin;
-  r2z =  d_sin;
-
-  const double half_h = std::tan (RAD (camera.fov * 0.5));
-
-  inv_half_h = 1.0f / half_h;
-
-  aspect = static_cast<double> (WW) / static_cast<double> (WH);
-
-  scale_x  =  0.5 * WW / (half_h * aspect);
-  offset_x =  0.5 * WW;
-
-  scale_y  = -0.5 * WH / half_h;
-  offset_y =  0.5 * WH;
-}
-
-
-// ----------------------------------------------------------------------------
-
-
-inline bool
-project (double dx, double dy, double dz, const Cache &cache, double &px, double &py)
-{
-  const double cz = dx * cache.r2x + dy * cache.r2y + dz * cache.r2z;
-
-  if (cz <= 0.0)
-    return false;
-
-  const double cx = dx * cache.r0x + dy * cache.r0y;
-  const double cy = dx * cache.r1x + dy * cache.r1y + dz * cache.r1z;
-
-  const double inv_cz = 1.0 / cz;
-
-  const double x = cx * inv_cz;
-  const double y = cy * inv_cz;
-
-  px = x * cache.inv_half_h / cache.aspect;
-  py = y * cache.inv_half_h;
-
-  return true;
-}
 
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -920,7 +480,6 @@ struct Mouse
   void
   update (const sf::RenderWindow &window);
 };
-
 
 
 // ----------------------------------------------------------------------------
@@ -953,25 +512,53 @@ Mouse::update (const sf::RenderWindow &window)
 ///////////////////////////////////////////////////////////////////////////////
 
 
-constexpr const char *VS_BASIC_COLOR = R"(
+constexpr const char *VS_PROJECT = R"(
 #version 330 core
 
-layout (location = 0) in vec2 a_position;
-layout (location = 1) in vec4 a_color;
+layout (location = 0) in vec3 a_position;
+layout (location = 1) in float a_lum;
+layout (location = 2) in vec3 a_tint;
+
+uniform vec3 u_camera_position;
+uniform vec3 u_camera_forward;
+uniform vec3 u_camera_right;
+uniform vec3 u_camera_up;
+
+uniform float u_inv_half_h;
+uniform float u_inv_half_w;
+uniform float u_brightness_scale;
 
 out vec4 v_color;
 
 void
 main ()
 {
-  gl_Position = vec4 (a_position, 0.0, 1.0);
+  vec3 d = a_position - u_camera_position;
 
-  v_color = a_color;
+  float cz = dot (d, u_camera_forward);
+
+  if (cz <= 0.0)
+    {
+      v_color = vec4 (a_tint.rgb, 0);
+      return;
+    }
+
+  float inv_cz = 1.0 / cz;
+
+  float px = dot (d, u_camera_right) * inv_cz * u_inv_half_w;
+  float py = dot (d, u_camera_up)    * inv_cz * u_inv_half_h;
+
+  gl_Position = vec4 (px, py, 0.0, 1.0);
+
+  float d2 = dot (d, d);
+  float brightness = u_brightness_scale * (a_lum / d2);
+
+  v_color = vec4(a_tint.rgb, clamp (brightness, 0.0, 1.0 / 16.0));
 }
 )";
 
 
-constexpr const char *FS_BASIC_COLOR = R"(
+constexpr const char *FS_PROJECT = R"(
 #version 330 core
 
 in vec4 v_color;
@@ -989,7 +576,7 @@ main ()
 // ----------------------------------------------------------------------------
 
 
-constexpr const char *VS_BASIC_TEXTURE = R"(
+constexpr const char *VS_TEXTURE = R"(
 #version 330 core
 
 layout (location = 0) in vec2 a_position;
@@ -1007,7 +594,7 @@ main ()
 )";
 
 
-constexpr const char *FS_BASIC_TEXTURE = R"(
+constexpr const char *FS_TEXTURE = R"(
 #version 330 core
 
 uniform sampler2D u_texture;
@@ -1022,7 +609,6 @@ main ()
   f_color = texture2D (u_texture, v_uv);
 }
 )";
-
 
 
 // ----------------------------------------------------------------------------
@@ -1146,7 +732,7 @@ Framebuffer::Framebuffer (uint32_t _w, uint32_t _h, Format _format)
     GL_FLOAT,
     nullptr
   );
- 
+
   glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
   glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
   glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -1236,7 +822,7 @@ struct Text : sf::Text
 };
 
 
-///////////////////////////////////////////////////////////////////////////////
+// ----------------------------------------------------------------------------
 
 
 Text::Text (const sf::Font &font, unsigned size)
@@ -1293,15 +879,15 @@ main (int argc, char **argv)
 
   std::cout << "Importing data...\n";
 
-  std::vector<Star> stars;
+  std::vector<Gaia_Star> gaia_stars;
 
-  if (!import_gaia (stars, file))
+  if (!import_gaia (gaia_stars, file))
     {
       std::cerr << "Failed to import data\n";
       exit (1);
     }
 
-  const size_t N_STARS = stars.size ();
+  const size_t N_STARS = gaia_stars.size ();
 
   /////////////////////////////////////////////////////////////////////////////
 
@@ -1367,23 +953,23 @@ main (int argc, char **argv)
   text_camera.setFillColor ({ 128, 128, 128 });
   text_speed.setFillColor ({ 128, 196, 255 });
 
-  text_file.write (std::to_string (N_STARS) + " stars imported\n" + file);
+  text_file.write (separate (N_STARS) + " stars imported\n" + file);
 
   /////////////////////////////////////////////////////////////////////////////
 
   Camera camera;
 
-  camera.position = vector3su::ZERO;
-
-  camera.ra  = 0;
-  camera.dec = 0;
   camera.fov = 90;
 
   double fov_target = camera.fov;
 
-  auto camera_speed = spatial_unit::from_ly (1);
+  auto camera_speed = 1.0;
 
   /////////////////////////////////////////////////////////////////////////////
+
+  sf::Shader shader_project;
+
+  shader_project.loadFromMemory (VS_PROJECT, FS_PROJECT);
 
   sf::Shader shader_blur;
 
@@ -1391,14 +977,10 @@ main (int argc, char **argv)
   shader_blur.setUniform ("u_texture", sf::Shader::CurrentTexture);
   shader_blur.setUniform ("u_texel", sf::Glsl::Vec2{ 1.0f / WW, 1.0f / WH });
 
-  sf::Shader shader_basic_color;
+  sf::Shader shader_texture;
 
-  shader_basic_color.loadFromMemory (VS_BASIC_COLOR, FS_BASIC_COLOR);
-
-  sf::Shader shader_basic_texture;
-
-  shader_basic_texture.loadFromMemory (VS_BASIC_TEXTURE, FS_BASIC_TEXTURE);
-  shader_basic_texture.setUniform ("u_texture", sf::Shader::CurrentTexture);
+  shader_texture.loadFromMemory (VS_TEXTURE, FS_TEXTURE);
+  shader_texture.setUniform ("u_texture", sf::Shader::CurrentTexture);
 
   /////////////////////////////////////////////////////////////////////////////
 
@@ -1436,21 +1018,11 @@ main (int argc, char **argv)
 
   /////////////////////////////////////////////////////////////////////////////
 
-  struct Vertex
-  {
-    float x;
-    float y;
-
-    float r;
-    float g;
-    float b;
-    float a;
-  };
+  window.setActive (true);
 
   GLuint vao;
   GLuint vbo;
 
-  window.setActive(true);
   glGenVertexArrays (1, &vao);
   glGenBuffers (1, &vbo);
 
@@ -1458,33 +1030,25 @@ main (int argc, char **argv)
 
   glBindBuffer (GL_ARRAY_BUFFER, vbo);
 
-  glBufferStorage (
-    GL_ARRAY_BUFFER,
-    N_STARS * sizeof (Vertex),
-    nullptr,
-    GL_MAP_WRITE_BIT |
-    GL_MAP_PERSISTENT_BIT |
-    GL_MAP_COHERENT_BIT
-  );
+  Star *stars = new Star[N_STARS];
 
-  auto vertices = static_cast<Vertex*> (
-    glMapBufferRange (
-      GL_ARRAY_BUFFER, 0, N_STARS * sizeof (Vertex),
-      GL_MAP_WRITE_BIT |
-      GL_MAP_PERSISTENT_BIT |
-      GL_MAP_COHERENT_BIT
-    )
-  );
+  for (size_t i = 0; i < N_STARS; ++i)
+    stars[i] = Star (gaia_stars[i]);
+
+  glBufferData (GL_ARRAY_BUFFER, N_STARS * sizeof (Star), stars, GL_STATIC_DRAW);
+
+  delete[] stars;
 
   glEnableVertexAttribArray (0);
-  glVertexAttribPointer (0, 2, GL_FLOAT, GL_FALSE, sizeof (Vertex), (void *)0);
+  glVertexAttribPointer (0, 3, GL_FLOAT, GL_FALSE, sizeof (Star), (void *)offsetof (Star, p));
 
   glEnableVertexAttribArray (1);
-  glVertexAttribPointer (1, 4, GL_FLOAT, GL_FALSE, sizeof (Vertex), (void *)(2 * sizeof (float)));
+  glVertexAttribPointer (1, 1, GL_FLOAT, GL_FALSE, sizeof (Star), (void *)offsetof (Star, lum));
+
+  glEnableVertexAttribArray (2);
+  glVertexAttribPointer (2, 3, GL_FLOAT, GL_FALSE, sizeof (Star), (void *)offsetof (Star, t));
 
   glBindVertexArray (0);
-
-  GLsync fence = 0;
 
   /////////////////////////////////////////////////////////////////////////////
 
@@ -1495,6 +1059,14 @@ main (int argc, char **argv)
   /////////////////////////////////////////////////////////////////////////////
 
   bool gui = true;
+
+  sf::RectangleShape crosshair;
+
+  crosshair.setSize ({ 4.0f, 4.0f });
+  crosshair.setPosition (WW / 2.0f - 2.0f, WH / 2.0f - 2.0f);
+  crosshair.setFillColor (sf::Color::Transparent);
+  crosshair.setOutlineColor (sf::Color{ 255, 224, 64 });
+  crosshair.setOutlineThickness (1);
 
   /////////////////////////////////////////////////////////////////////////////
 
@@ -1524,7 +1096,7 @@ main (int argc, char **argv)
                 break;
               case sf::Keyboard::Num0:
               case sf::Keyboard::Home:
-                camera.position = vector3su::ZERO;
+                camera.position = { 0, 0, 0 };
                 break;
               case sf::Keyboard::Add:
                 camera.exposure *= 2.0;
@@ -1539,7 +1111,7 @@ main (int argc, char **argv)
                 camera_speed /= 10;
                 break;
               case sf::Keyboard::C:
-                camera_speed = spatial_unit::from_km (SOL);
+                camera_speed = SOL_PC_S; // spatial_unit::from_km (SOL);
                 break;
               default:
                 break;
@@ -1561,8 +1133,8 @@ main (int argc, char **argv)
               {
                 if (event.mouseWheelScroll.delta > 0)
                   // Magic = (2^63 - 1) / 1.5
-                  if (camera_speed < spatial_unit::from_km (6148914691236516864))
-                    camera_speed *= 1.5;
+                  // if (camera_speed < spatial_unit::from_km (6148914691236516864))
+                  camera_speed *= 1.5;
 
                 if (event.mouseWheelScroll.delta < 0)
                   camera_speed /= 1.5;
@@ -1580,126 +1152,133 @@ main (int argc, char **argv)
 
       mouse.update (window);
 
-      camera.ra  -= mouse.delta.x * 0.1 * (camera.fov / 90.0);
-      camera.dec -= mouse.delta.y * 0.1 * (camera.fov / 90.0);
+      // Roll
+      {
+        const double ROLL_SPEED = 90.0 * dt;
 
-      camera.ra  = camera.ra - std::floor(camera.ra / 360.0) * 360.0;
-      camera.dec = clamp (camera.dec, -90.0, 90.0);
+        double roll_dir = 0.0;
 
-      const double r_rad = RAD (camera.ra);
-      const double d_rad = RAD (camera.dec);
+        if (sf::Keyboard::isKeyPressed (sf::Keyboard::E))
+          roll_dir += 1.0;
 
-      const double r_sin = std::sin (r_rad);
-      const double r_cos = std::cos (r_rad);
+        if (sf::Keyboard::isKeyPressed (sf::Keyboard::Q))
+          roll_dir -= 1.0;
 
-      const double d_sin = std::sin (d_rad);
-      const double d_cos = std::cos (d_rad);
+        if (roll_dir != 0.0)
+          {
+            const double cr = std::cos (RAD (ROLL_SPEED * roll_dir));
+            const double sr = std::sin (RAD (ROLL_SPEED * roll_dir));
 
-      const double fx =  d_cos * r_cos;
-      const double fy =  d_cos * r_sin;
-      const double fz =  d_sin;
+            const vec3 new_right = normalize (camera.right * cr - camera.up    * sr);
+            const vec3 new_up    = normalize (camera.up    * cr + camera.right * sr);
 
-      const double rx =  r_sin;
-      const double ry = -r_cos;
-      const double rz =  0.0;
+            camera.right = new_right;
+            camera.up    = new_up;
+          }
+      }
 
-      const double ux = -d_sin * r_cos;
-      const double uy = -d_sin * r_sin;
-      const double uz =  d_cos;
+      // Yaw, Pitch
+      {
+        const double SENSITIVITY = 0.1 * (camera.fov / 90.0);
 
-      const auto move_speed = camera_speed * dt;
+        const double y_rad = RAD (mouse.delta.x * SENSITIVITY);
+        const double p_rad = RAD (mouse.delta.y * SENSITIVITY);
 
-      if (sf::Keyboard::isKeyPressed (sf::Keyboard::W))
+        const double sy = std::sin (y_rad);
+        const double cy = std::cos (y_rad);
+
+        const double sp = std::sin (p_rad);
+        const double cp = std::cos (p_rad);
+
         {
-          camera.position.x += fx * move_speed;
-          camera.position.y += fy * move_speed;
-          camera.position.z += fz * move_speed;
+          const vec3 new_forward = normalize (camera.forward * cy + camera.right   * sy);
+          const vec3 new_right   = normalize (camera.right   * cy - camera.forward * sy);
+
+          camera.forward = new_forward;
+          camera.right   = new_right;
         }
 
-      if (sf::Keyboard::isKeyPressed (sf::Keyboard::S))
         {
-          camera.position.x -= fx * move_speed;
-          camera.position.y -= fy * move_speed;
-          camera.position.z -= fz * move_speed;
-        }
+          const vec3 new_forward = normalize (camera.forward * cp - camera.up      * sp);
+          const vec3 new_up      = normalize (camera.up      * cp + camera.forward * sp);
 
-      if (sf::Keyboard::isKeyPressed (sf::Keyboard::D))
-        {
-          camera.position.x += rx * move_speed;
-          camera.position.y += ry * move_speed;
-          camera.position.z += rz * move_speed;
+          camera.forward = new_forward;
+          camera.up      = new_up;
         }
+      }
 
-      if (sf::Keyboard::isKeyPressed (sf::Keyboard::A))
-        {
-          camera.position.x -= rx * move_speed;
-          camera.position.y -= ry * move_speed;
-          camera.position.z -= rz * move_speed;
-        }
+      camera.forward = normalize (camera.forward);
+      camera.right   = normalize (cross (camera.forward, camera.up));
+      camera.up      = normalize (cross (camera.right,   camera.forward));
 
-      if (sf::Keyboard::isKeyPressed (sf::Keyboard::Space))
-        {
-          camera.position.x += ux * move_speed;
-          camera.position.y += uy * move_speed;
-          camera.position.z += uz * move_speed;
-        }
+      {
+        const auto MOVE_SPEED = camera_speed * dt;
 
-      if (sf::Keyboard::isKeyPressed (sf::Keyboard::LControl))
-        {
-          camera.position.x -= ux * move_speed;
-          camera.position.y -= uy * move_speed;
-          camera.position.z -= uz * move_speed;
-        }
+        if (sf::Keyboard::isKeyPressed (sf::Keyboard::W))
+          camera.position += camera.forward * MOVE_SPEED;
+        if (sf::Keyboard::isKeyPressed (sf::Keyboard::S))
+          camera.position -= camera.forward * MOVE_SPEED;
+
+        if (sf::Keyboard::isKeyPressed (sf::Keyboard::D))
+          camera.position += camera.right * MOVE_SPEED;
+        if (sf::Keyboard::isKeyPressed (sf::Keyboard::A))
+          camera.position -= camera.right * MOVE_SPEED;
+
+        if (sf::Keyboard::isKeyPressed (sf::Keyboard::Space))
+          camera.position += camera.up * MOVE_SPEED;
+        if (sf::Keyboard::isKeyPressed (sf::Keyboard::LControl))
+          camera.position -= camera.up * MOVE_SPEED;
+      }
 
       /////////////////////////////////////////////////////////////////////////
 
       window.setActive (true);
 
-      Cache cache (camera);
-
-      const double cx = camera.position.x.to_pc ();
-      const double cy = camera.position.y.to_pc ();
-      const double cz = camera.position.z.to_pc ();
-
-      const double brightness_scale = camera.exposure * cache.inv_half_h;
-
-      if (fence)
-        {
-          glClientWaitSync (fence, 0, 0);
-          glDeleteSync (fence);
-          fence = 0;
+      shader_project.setUniform (
+        "u_camera_position",
+        sf::Glsl::Vec3{
+          static_cast<float> (camera.position.x),
+          static_cast<float> (camera.position.y),
+          static_cast<float> (camera.position.z)
         }
+      );
 
-      for (size_t i = 0; i < N_STARS; ++i)
-        {
-          const auto &star = stars[i];
-
-          auto &vertex = vertices[i];
-
-          double px, py;
-
-          double dx = star.x - cx;
-          double dy = star.y - cy;
-          double dz = star.z - cz;
-
-          if (!project (dx, dy, dz, cache, px, py))
-            {
-              vertex.a = 0;
-              continue;
-            }
-
-          vertex.x = px;
-          vertex.y = py;
-
-          double d2 = dx * dx + dy * dy + dz * dz;
-
-          double brightness = brightness_scale * (star.lum / d2);
-
-          vertex.r = static_cast<float> (star.tint.r) / 255.0f;
-          vertex.g = static_cast<float> (star.tint.g) / 255.0f;
-          vertex.b = static_cast<float> (star.tint.b) / 255.0f;
-          vertex.a = static_cast<float> (clamp (brightness, 0.0, 1.0 / 16.0));
+      shader_project.setUniform (
+        "u_camera_forward",
+        sf::Glsl::Vec3{
+          static_cast<float> (camera.forward.x),
+          static_cast<float> (camera.forward.y),
+          static_cast<float> (camera.forward.z)
         }
+      );
+
+      shader_project.setUniform (
+        "u_camera_right",
+        sf::Glsl::Vec3{
+          static_cast<float> (camera.right.x),
+          static_cast<float> (camera.right.y),
+          static_cast<float> (camera.right.z)
+        }
+      );
+
+      shader_project.setUniform (
+        "u_camera_up",
+        sf::Glsl::Vec3{
+          static_cast<float> (camera.up.x),
+          static_cast<float> (camera.up.y),
+          static_cast<float> (camera.up.z)
+        }
+      );
+
+      const float half_h = std::tan (RAD (camera.fov * 0.5));
+      const float half_w = half_h * ASPECT;
+
+      const float inv_half_h = 1.0f / half_h;
+      const float inv_half_w = 1.0f / half_w;
+
+      shader_project.setUniform ("u_inv_half_h", inv_half_h);
+      shader_project.setUniform ("u_inv_half_w", inv_half_w);
+      shader_project.setUniform ("u_brightness_scale", (float)camera.exposure * inv_half_h);
 
       /////////////////////////////////////////////////////////////////////////
 
@@ -1712,7 +1291,7 @@ main (int argc, char **argv)
       glClearColor (0, 0, 0, 1);
       glClear (GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-      sf::Shader::bind (&shader_basic_color);
+      sf::Shader::bind (&shader_project);
 
       glBindVertexArray (vao);
       glDrawArrays (GL_POINTS, 0, N_STARS);
@@ -1760,7 +1339,7 @@ main (int argc, char **argv)
       glClearColor (16.0 / 255.0, 16.0 / 255.0, 16.0 / 255.0, 1);
       glClear (GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-      sf::Shader::bind (&shader_basic_texture);
+      sf::Shader::bind (&shader_texture);
 
       glActiveTexture (GL_TEXTURE0);
       glBindTexture (GL_TEXTURE_2D, blur_v.texture);
@@ -1768,11 +1347,6 @@ main (int argc, char **argv)
       glBindVertexArray (quad_vao);
       glDrawArrays (GL_TRIANGLES, 0, 6);
       glBindVertexArray (0);
-
-      if (fence)
-        glDeleteSync (fence);
-
-      fence = glFenceSync (GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
 
       /////////////////////////////////////////////////////////////////////////
 
@@ -1787,7 +1361,7 @@ main (int argc, char **argv)
           else
             text_perf.setFillColor(sf::Color{ 196, 32, 32 });
 
-          text_perf.write (to_human (dt) + "s " + to_human_round (1.0f / dt) + " fps");
+          text_perf.write (to_human (dt) + "s " + to_human_round (1.0f / dt, 1) + " fps");
           text_perf.place (10, 10);
           window.draw (text_perf);
 
@@ -1799,9 +1373,7 @@ main (int argc, char **argv)
           // ------------------------------------------------------------------
 
           text_camera.write (
-            "Ra "  + to_human_round (camera.ra)  + "°\n" +
-            "Dec " + to_human_round (camera.dec) + "°\n" +
-            "FOV " + to_human_round (camera.fov) + "°"
+            "FOV " + to_human_round (camera.fov, 1) + "°"
           );
           text_camera.place (WW - 10, WH - 10, 1, 1);
           window.draw (text_camera);
@@ -1809,21 +1381,13 @@ main (int argc, char **argv)
           // ------------------------------------------------------------------
 
           text_speed.write (
-            to_human (camera_speed) + "/s (" +
-            to_human (camera_speed.to_km () / SOL) + "c)"
+            to_human_speed (camera_speed) + " (" + to_human (camera_speed / SOL_PC_S) + "c)"
           );
+
           text_speed.place (WW / 2, WH - 24, 0.5, 1);
           window.draw (text_speed);
 
           // ------------------------------------------------------------------
-
-          sf::RectangleShape crosshair;
-
-          crosshair.setSize ({ 4.0f, 4.0f });
-          crosshair.setPosition (WW / 2.0f - 2.0f, WH / 2.0f - 2.0f);
-          crosshair.setFillColor (sf::Color::Transparent);
-          crosshair.setOutlineColor (sf::Color{ 255, 224, 64 });
-          crosshair.setOutlineThickness (1);
 
           window.draw (crosshair);
         }
