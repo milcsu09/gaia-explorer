@@ -26,6 +26,20 @@ ORDER BY gs.parallax DESC
 """
 
 
+#     gs.parallax BETWEEN 0.5 AND 14.0
+#     AND ap.lum_flame IS NOT NULL
+#     AND ap.teff_gspphot IS NOT NULL
+#
+# ORDER BY ap.lum_flame DESC
+
+
+#     gs.parallax > 0.0
+#     AND ap.lum_flame IS NOT NULL
+#     AND ap.teff_gspphot IS NOT NULL
+#
+# ORDER BY gs.parallax DESC
+
+
 import sys
 
 from astroquery.gaia import Gaia

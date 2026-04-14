@@ -15,15 +15,12 @@ constexpr bool VSYNC      = false;
 constexpr bool SHOW_MOUSE = false;
 
 
-// ----------------------------------------------------------------------------
+///////////////////////////////////////////////////////////////////////////////
 
 
 static int WW;
 static int WH;
 static double ASPECT;
-
-
-// constexpr double ASPECT = static_cast<double> (WW) / static_cast<double> (WH);
 
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -37,13 +34,7 @@ static constexpr double PI_4 = 0.78539816339744830962;
 #define DEG(a) ((a) / (PI / 180.0))
 
 
-static constexpr double SOL = 299'792.0 /* km/h */;
-
-static constexpr double PC_PER_LY = 0.306601;
-static constexpr double PC_PER_AU = 4.84813681e-6;
-static constexpr double KM_PER_PC = 3.085677581e13;
-
-static constexpr double SOL_PC_S = SOL / KM_PER_PC;
+// ----------------------------------------------------------------------------
 
 
 inline double
@@ -56,6 +47,64 @@ clamp (double x, double a, double b)
     return b;
 
   return x;
+}
+
+
+///////////////////////////////////////////////////////////////////////////////
+
+
+static constexpr double PC_PER_LY = 0.30660139383437;
+static constexpr double LY_PER_PC = 3.2615637766481;
+
+static constexpr double PC_PER_AU = 4.8481368118674e-6;
+static constexpr double AU_PER_PC = 206264.80621425;
+
+static constexpr double PC_PER_KM = 3.2407792899604e-14;
+static constexpr double KM_PER_PC = 30856775810000;
+
+static constexpr double SOL_KM_S = 299'792.458;
+static constexpr double SOL_PC_S = SOL_KM_S / KM_PER_PC;
+
+
+constexpr double
+parsec_from_km (double km)
+{
+  return km * PC_PER_KM;
+}
+
+
+constexpr double
+parsec_to_km (double pc)
+{
+  return pc * KM_PER_PC;
+}
+
+
+constexpr double
+parsec_from_au (double au)
+{
+  return au * PC_PER_AU;
+}
+
+
+constexpr double
+parsec_to_au (double pc)
+{
+  return pc * AU_PER_PC;
+}
+
+
+constexpr double
+parsec_from_ly (double ly)
+{
+  return ly * PC_PER_LY;
+}
+
+
+constexpr double
+parsec_to_ly (double pc)
+{
+  return pc * LY_PER_PC;
 }
 
 
@@ -279,17 +328,17 @@ to_human (double x)
 
 
 std::string
-to_human_speed (double v_pc_s)
+to_human_parsec (double a)
 {
-  const double ax = std::abs (v_pc_s);
+  const double ax = std::abs (a);
 
   if (ax >= 0.1 * PC_PER_LY)
-    return separate (v_pc_s / PC_PER_LY, 1) + " ly/s";
+    return separate (parsec_to_ly (a), 1) + " ly";
 
   if (ax >= 0.1 * PC_PER_AU)
-    return separate (v_pc_s / PC_PER_AU, 1) + " AU/s";
+    return separate (parsec_to_au (a), 1) + " AU";
 
-  return separate (v_pc_s * KM_PER_PC, 0) + " km/s";
+  return separate (parsec_to_km (a), 0) + " km";
 }
 
 
@@ -337,35 +386,59 @@ struct Gaia_Star
 
   Gaia_Star () = default;
 
-  Gaia_Star (std::string line);
+  Gaia_Star (const std::string &line);
 };
 
 
 // ----------------------------------------------------------------------------
 
 
-Gaia_Star::Gaia_Star (std::string line)
+Gaia_Star::Gaia_Star (const std::string &line)
 {
-  std::stringstream ss (line);
-  std::string token;
+  const char *p = line.c_str ();
 
-  std::getline (ss, token, ',');
-  source_id = std::stoll (token);
+  char *end;
 
-  std::getline (ss, token, ',');
-  ra = std::stod (token);
+  source_id = std::strtoll (p, &end, 10);
+  p = end + 1;
 
-  std::getline (ss, token, ',');
-  dec = std::stod (token);
+  ra = std::strtod (p, &end);
+  p = end + 1;
 
-  std::getline (ss, token, ',');
-  parallax = std::stod (token);
+  dec = std::strtod (p, &end);
+  p = end + 1;
 
-  std::getline (ss, token, ',');
-  lum_flame = std::stod (token);
+  parallax = std::strtod (p, &end);
+  p = end + 1;
 
-  std::getline (ss, token, ',');
-  teff_gspphot = std::stod (token);
+  lum_flame = std::strtod (p, &end);
+  p = end + 1;
+
+  teff_gspphot = std::strtod (p, &end);
+}
+
+
+///////////////////////////////////////////////////////////////////////////////
+
+
+bool
+import_gaia (std::vector<Gaia_Star> &stars, const std::string &path)
+{
+  std::ifstream file (path);
+
+  if (!file.is_open ())
+    return false;
+
+  stars.reserve (3'000'000);
+
+  std::string line;
+
+  std::getline (file, line); // Header
+
+  while (std::getline (file, line))
+    stars.emplace_back (/* Gaia_Star{} */ line);
+
+  return !file.bad ();
 }
 
 
@@ -382,14 +455,14 @@ struct Star
 
   Star () = default;
 
-  Star (Gaia_Star gaia_star);
+  Star (const Gaia_Star &gaia_star);
 };
 
 
 // ----------------------------------------------------------------------------
 
 
-Star::Star (Gaia_Star gaia_star)
+Star::Star (const Gaia_Star &gaia_star)
 {
   double r_rad = RAD (gaia_star.ra);
   double d_rad = RAD (gaia_star.dec);
@@ -409,34 +482,6 @@ Star::Star (Gaia_Star gaia_star)
   t[0] = r / 255.0f;
   t[1] = g / 255.0f;
   t[2] = b / 255.0f;
-}
-
-
-///////////////////////////////////////////////////////////////////////////////
-
-
-bool
-import_gaia (std::vector<Gaia_Star> &stars, const std::string &path)
-{
-  std::ifstream file (path);
-
-  if (!file.is_open ())
-    return false;
-
-  std::string line;
-
-  std::getline (file, line); // Header
-
-  while (std::getline (file, line))
-    stars.emplace_back (Gaia_Star (line));
-
-  if (file.bad ())
-    return false;
-
-  if (!file.eof ())
-    return false;
-
-  return true;
 }
 
 
@@ -918,7 +963,6 @@ main (int argc, char **argv)
   };
 
   /*
-
   window.setPosition ({
     SW / 2 - WW / 2,
     SH / 2 - WH / 2
@@ -930,7 +974,7 @@ main (int argc, char **argv)
   window.setMouseCursorVisible (SHOW_MOUSE);
 
   /////////////////////////////////////////////////////////////////////////////
- 
+
   glewExperimental = GL_TRUE;
 
   if (glewInit () != GLEW_OK)
@@ -979,7 +1023,7 @@ main (int argc, char **argv)
 
   double fov_target = camera.fov;
 
-  double camera_speed = 1.0 * PC_PER_LY;
+  double camera_speed = parsec_from_ly (1.0);
 
   /////////////////////////////////////////////////////////////////////////////
 
@@ -1127,7 +1171,7 @@ main (int argc, char **argv)
                 camera_speed /= 10;
                 break;
               case sf::Keyboard::C:
-                camera_speed = SOL_PC_S; // spatial_unit::from_km (SOL);
+                camera_speed = SOL_PC_S;
                 break;
               default:
                 break;
@@ -1387,7 +1431,6 @@ main (int argc, char **argv)
           // ------------------------------------------------------------------
 
           text_camera.write (
-            "D0 " + to_human_round (std::sqrt (dot (camera.position, camera.position)), 1) + "pc\n"
             "FOV " + to_human_round (camera.fov, 1) + "°"
           );
           text_camera.place (WW - 10, WH - 10, 1, 1);
@@ -1396,10 +1439,10 @@ main (int argc, char **argv)
           // ------------------------------------------------------------------
 
           text_speed.write (
-            to_human_speed (camera_speed) + " (" + to_human (camera_speed / SOL_PC_S) + "c)"
+            to_human_parsec (camera_speed) + "/s (" + to_human (camera_speed / SOL_PC_S) + "c)"
           );
 
-          text_speed.place (WW / 2, WH - 24, 0.5, 1);
+          text_speed.place (WW / 2.0f, WH - 24, 0.5, 1);
           window.draw (text_speed);
 
           // ------------------------------------------------------------------
