@@ -863,6 +863,9 @@ struct Text : sf::Text
 
   void
   place (float px, float py, float mx, float my);
+
+  sf::RectangleShape
+  backdrop () const;
 };
 
 
@@ -902,6 +905,33 @@ Text::place (float px, float py, float mx, float my)
   setOrigin (x, y);
 
   setPosition (px, py);
+}
+
+
+sf::RectangleShape
+Text::backdrop () const
+{
+  constexpr float p = 5;
+
+  const auto bounds = getGlobalBounds ();
+
+  sf::RectangleShape shape;
+
+  shape.setPosition ({ bounds.left - p, bounds.top - p });
+  shape.setSize ({ bounds.width + p * 2, bounds.height + p * 2 });
+  shape.setFillColor (sf::Color{ 0, 0, 0, 128 });
+
+  sf::Color outline_color = getFillColor ();
+
+  outline_color.r /= 2;
+  outline_color.g /= 2;
+  outline_color.b /= 2;
+  outline_color.a = 128;
+
+  shape.setOutlineColor (outline_color);
+  shape.setOutlineThickness (2);
+
+  return shape;
 }
 
 
@@ -1013,7 +1043,7 @@ main (int argc, char **argv)
   text_camera.setFillColor ({ 128, 128, 128 });
   text_speed.setFillColor ({ 128, 196, 255 });
 
-  text_file.write (separate (N_STARS) + " stars imported\n" + file);
+  text_file.write (separate (N_STARS) + " stars\n" + file);
 
   /////////////////////////////////////////////////////////////////////////////
 
@@ -1412,6 +1442,14 @@ main (int argc, char **argv)
 
       if (gui)
         {
+          // sf::RectangleShape backdrop;
+
+          // backdrop.setPosition ({ 10, 10 });
+          // backdrop.setSize ({ 100, 100 });
+          // backdrop.setFillColor (sf::Color{ 0, 0, 0, 128 });
+
+          // window.draw (backdrop);
+
           if (dt < 1.0 / 60.0)
             text_perf.setFillColor (sf::Color{ 32, 196, 32 });
           else if (dt < 1.0 / 30.0)
@@ -1419,13 +1457,15 @@ main (int argc, char **argv)
           else
             text_perf.setFillColor (sf::Color{ 196, 32, 32 });
 
-          text_perf.write (to_human (dt) + "s " + to_human_round (1.0f / dt, 1) + " fps");
-          text_perf.place (10, 10);
+          text_perf.write ("FPS " + to_human_round (1.0f / dt, 1) + " | " + to_human (dt) + "s");
+          text_perf.place (10, 10, 0, 0);
+          window.draw (text_perf.backdrop ());
           window.draw (text_perf);
 
           // ------------------------------------------------------------------
 
           text_file.place (10, WH - 10, 0, 1);
+          window.draw (text_file.backdrop ());
           window.draw (text_file);
 
           // ------------------------------------------------------------------
@@ -1434,15 +1474,17 @@ main (int argc, char **argv)
             "FOV " + to_human_round (camera.fov, 1) + "°"
           );
           text_camera.place (WW - 10, WH - 10, 1, 1);
+          window.draw (text_camera.backdrop ());
           window.draw (text_camera);
 
           // ------------------------------------------------------------------
 
           text_speed.write (
-            to_human_parsec (camera_speed) + "/s (" + to_human (camera_speed / SOL_PC_S) + "c)"
+            to_human_parsec (camera_speed) + "/s | " + to_human (camera_speed / SOL_PC_S) + "c"
           );
 
-          text_speed.place (WW / 2.0f, WH - 24, 0.5, 1);
+          text_speed.place (WW / 2.0f, WH - 10, 0.5, 1);
+          window.draw (text_speed.backdrop ());
           window.draw (text_speed);
 
           // ------------------------------------------------------------------
