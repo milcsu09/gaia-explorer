@@ -40,7 +40,7 @@ make
 | Bind | Action |
 | ---- | ------ |
 | `ESC` | Quit |
-| `F1` | Toggle GUI |
+| `F1` | Toggle HUD |
 | `0` or `Home` | Teleport to Earth (`0,0,0`) |
 | `W` | Move forward |
 | `S` | Move backward |

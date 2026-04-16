@@ -1062,6 +1062,8 @@ main (int argc, char **argv)
 
   double fov_target = camera.fov;
 
+  double exposure_target = camera.exposure;
+
   double camera_speed = parsec_from_ly (1.0);
 
   /////////////////////////////////////////////////////////////////////////////
@@ -1157,7 +1159,7 @@ main (int argc, char **argv)
 
   /////////////////////////////////////////////////////////////////////////////
 
-  bool gui = true;
+  bool hud = true;
 
   sf::RectangleShape crosshair;
 
@@ -1191,17 +1193,17 @@ main (int argc, char **argv)
                 window.close ();
                 break;
               case sf::Keyboard::F1:
-                gui = !gui;
+                hud = !hud;
                 break;
               case sf::Keyboard::Num0:
               case sf::Keyboard::Home:
                 camera.position = { 0, 0, 0 };
                 break;
               case sf::Keyboard::Add:
-                camera.exposure *= 2.0;
+                exposure_target *= 2.0;
                 break;
               case sf::Keyboard::Subtract:
-                camera.exposure /= 2.0;
+                exposure_target /= 2.0;
                 break;
               case sf::Keyboard::R:
                 camera_speed *= 10;
@@ -1244,6 +1246,8 @@ main (int argc, char **argv)
           }
 
       camera.fov += (fov_target - camera.fov) * (1.0f - std::exp (-8 * dt));
+
+      camera.exposure += (exposure_target - camera.exposure) * (1.0f - std::exp (-4 * dt));
 
       /////////////////////////////////////////////////////////////////////////
 
@@ -1455,7 +1459,7 @@ main (int argc, char **argv)
 
       window.resetGLStates ();
 
-      if (gui)
+      if (hud)
         {
           if (dt < 1.0 / 60.0)
             text_perf.setFillColor (sf::Color{ 32, 196, 32 });
