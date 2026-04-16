@@ -3,7 +3,6 @@
 #include <SFML/OpenGL.hpp>
 #include <iostream>
 #include <fstream>
-#include <sstream>
 #include <cmath>
 #include <cstddef> 
 
@@ -117,6 +116,9 @@ struct vec3
   double y;
   double z;
 
+  double
+  length () const;
+
   vec3
   operator+ (vec3 b) const;
 
@@ -138,6 +140,13 @@ struct vec3
 
 
 // ----------------------------------------------------------------------------
+
+
+double
+vec3::length () const
+{
+  return std::sqrt (x * x + y * y + z * z);
+}
 
 
 vec3
@@ -1442,14 +1451,6 @@ main (int argc, char **argv)
 
       if (gui)
         {
-          // sf::RectangleShape backdrop;
-
-          // backdrop.setPosition ({ 10, 10 });
-          // backdrop.setSize ({ 100, 100 });
-          // backdrop.setFillColor (sf::Color{ 0, 0, 0, 128 });
-
-          // window.draw (backdrop);
-
           if (dt < 1.0 / 60.0)
             text_perf.setFillColor (sf::Color{ 32, 196, 32 });
           else if (dt < 1.0 / 30.0)
@@ -1457,7 +1458,7 @@ main (int argc, char **argv)
           else
             text_perf.setFillColor (sf::Color{ 196, 32, 32 });
 
-          text_perf.write ("FPS " + to_human_round (1.0f / dt, 1) + " | " + to_human (dt) + "s");
+          text_perf.write (to_human (dt) + "s ≈ " + to_human_round (1.0f / dt, 1) + " FPS");
           text_perf.place (10, 10, 0, 0);
           window.draw (text_perf.backdrop ());
           window.draw (text_perf);
@@ -1470,7 +1471,29 @@ main (int argc, char **argv)
 
           // ------------------------------------------------------------------
 
+          std::string orientation = "";
+
+          if (camera.position.length () <= 1 * PC_PER_AU)
+            {
+              const vec3 f = normalize(camera.forward);
+
+              const double x = f.x;
+              const double y = f.y;
+              const double z = f.z;
+
+              double r = std::atan2 (y, x);
+              double d = std::asin (z);
+
+              if (r < 0)
+                r += 2.0 * M_PI;
+
+              orientation =
+                "Ra  " + to_human_round (DEG (r), 1) + "°\n" +
+                "Dec " + to_human_round (DEG (d), 1) + "°\n";
+            }
+
           text_camera.write (
+            orientation +
             "FOV " + to_human_round (camera.fov, 1) + "°"
           );
           text_camera.place (WW - 10, WH - 10, 1, 1);
@@ -1480,10 +1503,10 @@ main (int argc, char **argv)
           // ------------------------------------------------------------------
 
           text_speed.write (
-            to_human_parsec (camera_speed) + "/s | " + to_human (camera_speed / SOL_PC_S) + "c"
+            to_human_parsec (camera_speed) + "/s ≈ " + to_human (camera_speed / SOL_PC_S) + "c"
           );
-
           text_speed.place (WW / 2.0f, WH - 10, 0.5, 1);
+
           window.draw (text_speed.backdrop ());
           window.draw (text_speed);
 
