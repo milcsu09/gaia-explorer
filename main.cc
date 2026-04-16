@@ -1251,35 +1251,41 @@ main (int argc, char **argv)
 
       // Roll
       {
-        const double ROLL_SPEED = 90.0 * dt;
+        const double SENSITIVITY = 0.1 * (/* camera.fov */ 90.0 / 90.0);
 
-        double roll_dir = 0.0;
+        double r_rad = 0;
 
-        if (sf::Keyboard::isKeyPressed (sf::Keyboard::E))
-          roll_dir += 1.0;
+        if (sf::Mouse::isButtonPressed (sf::Mouse::Middle))
+          r_rad += RAD (mouse.delta.x * SENSITIVITY);
 
         if (sf::Keyboard::isKeyPressed (sf::Keyboard::Q))
-          roll_dir -= 1.0;
+          r_rad -= RAD (180) * dt;
 
-        if (roll_dir != 0.0)
-          {
-            const double cr = std::cos (RAD (ROLL_SPEED * roll_dir));
-            const double sr = std::sin (RAD (ROLL_SPEED * roll_dir));
+        if (sf::Keyboard::isKeyPressed (sf::Keyboard::E))
+          r_rad += RAD (180) * dt;
 
-            const vec3 new_right = normalize (camera.right * cr - camera.up    * sr);
-            const vec3 new_up    = normalize (camera.up    * cr + camera.right * sr);
+        const double sr = std::sin (r_rad);
+        const double cr = std::cos (r_rad);
 
-            camera.right = new_right;
-            camera.up    = new_up;
-          }
+        const vec3 new_right = normalize (camera.right * cr - camera.up    * sr);
+        const vec3 new_up    = normalize (camera.up    * cr + camera.right * sr);
+
+        camera.right = new_right;
+        camera.up    = new_up;
       }
 
       // Yaw, Pitch
       {
         const double SENSITIVITY = 0.1 * (camera.fov / 90.0);
 
-        const double y_rad = RAD (mouse.delta.x * SENSITIVITY);
-        const double p_rad = RAD (mouse.delta.y * SENSITIVITY);
+        double y_rad = 0;
+        double p_rad = 0;
+
+        if (!sf::Mouse::isButtonPressed (sf::Mouse::Middle))
+          {
+            y_rad += RAD (mouse.delta.x * SENSITIVITY);
+            p_rad += RAD (mouse.delta.y * SENSITIVITY);
+          }
 
         const double sy = std::sin (y_rad);
         const double cy = std::cos (y_rad);

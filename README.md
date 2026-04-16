@@ -48,17 +48,20 @@ make
 | `D` | Move right |
 | `Space` | Move up |
 | `Control` | Move down |
-| `Q` | Roll camera left |
-| `E` | Roll camera right |
-| `+` | Increase camera exposure |
-| `-` | Decrease camera exposure |
-| `R` | ×10 camera speed |
-| `F` | ÷10 camera speed |
-| `C` | Set camera speed to `1c` *(speed of light)* |
-| `Scroll Up` | Increase camera speed |
-| `Scroll Down` | Decrease camera speed |
-| `Right Click` + `Scroll Up` | Zoom in |
-| `Right Click` + `Scroll Down` | Zoom out |
+| `Mouse X` | Look left / right |
+| `Mouse Y` | Look up / down |
+| `Q` | Roll left |
+| `E` | Roll right |
+| `MMB` + `Mouse X` | Roll left / right |
+| `RMB` + `Scroll Up` | Zoom in |
+| `RMB` + `Scroll Down` | Zoom out |
+| `R` | ×10 speed |
+| `F` | ÷10 speed |
+| `C` | Set speed to `1c` *(speed of light)* |
+| `Scroll Up` | Increase speed |
+| `Scroll Down` | Decrease speed |
+| `+` | Increase exposure |
+| `-` | Decrease exposure |
 
 ## Implementation
 
@@ -68,5 +71,5 @@ Positions are stored as floating-point numbers, which makes it easy to project s
 
 ## Performance
 
-On my system *(AMD Ryzen 5 3600, NVIDIA GeForce GTX 1650)*, the application renders 1'000'000 stars in real time with a peak frame time of \~6 ms (\~166 FPS).
+On my system *(AMD Ryzen 5 3600, NVIDIA GeForce GTX 1650)*, the application renders 1,000,000 stars in real time with a peak frame time of \~6 ms (\~166 FPS).
 
