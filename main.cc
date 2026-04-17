@@ -4,7 +4,8 @@
 #include <iostream>
 #include <fstream>
 #include <cmath>
-#include <cstddef> 
+#include <cstddef>
+#include <cstdlib>
 
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -225,7 +226,7 @@ dot (vec3 a, vec3 b)
 inline vec3
 normalize (vec3 a)
 {
-  return a / std::sqrt (dot (a, a));
+  return a / a.length ();
 }
 
 
@@ -255,7 +256,7 @@ to_human_round (double d, int n)
 
 
 std::string
-separate_with (std::string s, char sep = ',')
+separate_with (std::string s, char sep)
 {
   int insert_pos = s.length () - 3;
 
@@ -604,9 +605,13 @@ main ()
   gl_Position = vec4 (px, py, 0.0, 1.0);
 
   float d2 = dot (d, d);
-  float brightness = u_brightness_scale * (a_lum / d2);
 
-  v_color = vec4(a_tint.rgb, clamp (brightness, 0.0, 1.0 / 16.0));
+  float cos2 = (cz * cz) / d2;
+  float vignette = 1 / cos2;
+
+  float brightness = u_brightness_scale * (a_lum / d2) * vignette;
+
+  v_color = vec4 (a_tint.rgb, clamp (brightness, 0.0, 1.0 / 16.0));
 }
 )";
 
@@ -964,11 +969,15 @@ main (int argc, char **argv)
 
   std::vector<Gaia_Star> gaia_stars;
 
+  sf::Clock import_clock;
+
   if (!import_gaia (gaia_stars, file))
     {
       std::cerr << "Failed to import data\n";
       exit (1);
     }
+
+  std::cout << "Done " << import_clock.getElapsedTime ().asSeconds () << "s" << std::endl;
 
   const size_t N_STARS = gaia_stars.size ();
 
@@ -1263,10 +1272,10 @@ main (int argc, char **argv)
           r_rad += RAD (mouse.delta.x * SENSITIVITY);
 
         if (sf::Keyboard::isKeyPressed (sf::Keyboard::Q))
-          r_rad -= RAD (180) * dt;
+          r_rad -= RAD (135) * dt;
 
         if (sf::Keyboard::isKeyPressed (sf::Keyboard::E))
-          r_rad += RAD (180) * dt;
+          r_rad += RAD (135) * dt;
 
         const double sr = std::sin (r_rad);
         const double cr = std::cos (r_rad);
