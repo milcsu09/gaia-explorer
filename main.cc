@@ -878,8 +878,8 @@ struct Text : sf::Text
   void
   place (float px, float py, float mx, float my);
 
-  sf::RectangleShape
-  backdrop () const;
+  // sf::RectangleShape
+  // backdrop () const;
 };
 
 
@@ -922,30 +922,88 @@ Text::place (float px, float py, float mx, float my)
 }
 
 
-sf::RectangleShape
-Text::backdrop () const
-{
-  constexpr float p = 5;
+// sf::RectangleShape
+// Text::backdrop () const
+// {
+//   constexpr float p = 5;
+// 
+//   const auto bounds = getGlobalBounds ();
+// 
+//   sf::RectangleShape shape;
+// 
+//   shape.setPosition ({ bounds.left - p, bounds.top - p });
+//   shape.setSize ({ bounds.width + p * 2, bounds.height + p * 2 });
+//   shape.setFillColor (sf::Color{ 0, 0, 0 });
+// 
+//   sf::Color outline_color = getFillColor ();
+// 
+//   outline_color.r /= 2;
+//   outline_color.g /= 2;
+//   outline_color.b /= 2;
+//   outline_color.a = 128;
+// 
+//   shape.setOutlineColor (outline_color);
+//   shape.setOutlineThickness (2);
+// 
+//   return shape;
+// }
 
-  const auto bounds = getGlobalBounds ();
+
+void
+draw_text_backdrop (sf::RenderWindow &window, const Text &text)
+{
+  constexpr float P = 8; // padding size
+  constexpr float C = 4; // corner size
+
+  const auto bounds = text.getGlobalBounds ();
+
+  const float w = bounds.width;
+  const float h = bounds.height;
+
+  const float l = bounds.left - P;
+  const float r = bounds.left + P + w;
+  const float t = bounds.top - P;
+  const float b = bounds.top + P + h;
 
   sf::RectangleShape shape;
 
-  shape.setPosition ({ bounds.left - p, bounds.top - p });
-  shape.setSize ({ bounds.width + p * 2, bounds.height + p * 2 });
-  shape.setFillColor (sf::Color{ 0, 0, 0, 128 });
+  shape.setPosition ({ l, t });
+  shape.setSize ({ w + P * 2, h + P * 2 });
+  shape.setFillColor (sf::Color{ 0, 0, 0 });
+  shape.setOutlineColor (sf::Color{ 64, 64, 64 });
+  shape.setOutlineThickness (1);
 
-  sf::Color outline_color = getFillColor ();
+  window.draw (shape);
 
-  outline_color.r /= 2;
-  outline_color.g /= 2;
-  outline_color.b /= 2;
-  outline_color.a = 128;
+  const sf::Color corner_color{ 128,128,128 };
 
-  shape.setOutlineColor (outline_color);
-  shape.setOutlineThickness (2);
+  sf::Vertex corners[] = {
+    // Top Left
+    { { l, t }, corner_color },
+    { { l + C, t }, corner_color },
+    { { l, t }, corner_color },
+    { { l, t + C }, corner_color },
 
-  return shape;
+    // Bottom Left
+    { { l, b }, corner_color },
+    { { l + C, b }, corner_color },
+    { { l, b }, corner_color },
+    { { l, b - C }, corner_color },
+
+    // Top Right
+    { { r, t }, corner_color },
+    { { r - C, t }, corner_color },
+    { { r, t }, corner_color },
+    { { r, t + C }, corner_color },
+
+    // Bottom Right
+    { { r, b }, corner_color },
+    { { r - C, b }, corner_color },
+    { { r, b }, corner_color },
+    { { r, b - C }, corner_color },
+  };
+
+  window.draw (corners, std::size (corners), sf::Lines);
 }
 
 
@@ -1247,7 +1305,6 @@ main (int argc, char **argv)
                 if (event.mouseWheelScroll.delta < 0)
                   camera_speed /= 1.5;
               }
-
             break;
 
           default:
@@ -1478,14 +1535,14 @@ main (int argc, char **argv)
             text_perf.setFillColor (sf::Color{ 196, 32, 32 });
 
           text_perf.write (to_human (dt) + "s ≈ " + to_human_round (1.0f / dt, 1) + " FPS");
-          text_perf.place (10, 10, 0, 0);
-          window.draw (text_perf.backdrop ());
+          text_perf.place (15, 15, 0, 0);
+          draw_text_backdrop (window, text_perf);
           window.draw (text_perf);
 
           // ------------------------------------------------------------------
 
-          text_file.place (10, WH - 10, 0, 1);
-          window.draw (text_file.backdrop ());
+          text_file.place (15, WH - 15, 0, 1);
+          draw_text_backdrop (window, text_file);
           window.draw (text_file);
 
           // ------------------------------------------------------------------
@@ -1515,8 +1572,8 @@ main (int argc, char **argv)
             orientation +
             "FOV " + to_human_round (camera.fov, 1) + "°"
           );
-          text_camera.place (WW - 10, WH - 10, 1, 1);
-          window.draw (text_camera.backdrop ());
+          text_camera.place (WW - 15, WH - 15, 1, 1);
+          draw_text_backdrop (window, text_camera);
           window.draw (text_camera);
 
           // ------------------------------------------------------------------
@@ -1524,9 +1581,9 @@ main (int argc, char **argv)
           text_speed.write (
             to_human_parsec (camera_speed) + "/s ≈ " + to_human (camera_speed / SOL_PC_S) + "c"
           );
-          text_speed.place (WW / 2.0f, WH - 10, 0.5, 1);
 
-          window.draw (text_speed.backdrop ());
+          text_speed.place (WW / 2.0f, WH - 15, 0.5, 1);
+          draw_text_backdrop (window, text_speed);
           window.draw (text_speed);
 
           // ------------------------------------------------------------------
