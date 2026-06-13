@@ -877,9 +877,6 @@ struct Text : sf::Text
 
   void
   place (float px, float py, float mx, float my);
-
-  // sf::RectangleShape
-  // backdrop () const;
 };
 
 
@@ -922,33 +919,6 @@ Text::place (float px, float py, float mx, float my)
 }
 
 
-// sf::RectangleShape
-// Text::backdrop () const
-// {
-//   constexpr float p = 5;
-// 
-//   const auto bounds = getGlobalBounds ();
-// 
-//   sf::RectangleShape shape;
-// 
-//   shape.setPosition ({ bounds.left - p, bounds.top - p });
-//   shape.setSize ({ bounds.width + p * 2, bounds.height + p * 2 });
-//   shape.setFillColor (sf::Color{ 0, 0, 0 });
-// 
-//   sf::Color outline_color = getFillColor ();
-// 
-//   outline_color.r /= 2;
-//   outline_color.g /= 2;
-//   outline_color.b /= 2;
-//   outline_color.a = 128;
-// 
-//   shape.setOutlineColor (outline_color);
-//   shape.setOutlineThickness (2);
-// 
-//   return shape;
-// }
-
-
 void
 draw_text_backdrop (sf::RenderWindow &window, const Text &text)
 {
@@ -979,28 +949,28 @@ draw_text_backdrop (sf::RenderWindow &window, const Text &text)
 
   sf::Vertex corners[] = {
     // Top Left
-    { { l, t }, corner_color },
-    { { l + C, t }, corner_color },
-    { { l, t }, corner_color },
-    { { l, t + C }, corner_color },
+    { { l,     t },     corner_color },
+    { { l + C, t },     corner_color },
+    { { l,     t },     corner_color },
+    { { l,     t + C }, corner_color },
 
     // Bottom Left
-    { { l, b }, corner_color },
-    { { l + C, b }, corner_color },
-    { { l, b }, corner_color },
-    { { l, b - C }, corner_color },
+    { { l,     b },     corner_color },
+    { { l + C, b },     corner_color },
+    { { l,     b },     corner_color },
+    { { l,     b - C }, corner_color },
 
     // Top Right
-    { { r, t }, corner_color },
-    { { r - C, t }, corner_color },
-    { { r, t }, corner_color },
-    { { r, t + C }, corner_color },
+    { { r,     t },     corner_color },
+    { { r - C, t },     corner_color },
+    { { r,     t },     corner_color },
+    { { r,     t + C }, corner_color },
 
     // Bottom Right
-    { { r, b }, corner_color },
-    { { r - C, b }, corner_color },
-    { { r, b }, corner_color },
-    { { r, b - C }, corner_color },
+    { { r,     b },     corner_color },
+    { { r - C, b },     corner_color },
+    { { r,     b },     corner_color },
+    { { r,     b - C }, corner_color },
   };
 
   window.draw (corners, std::size (corners), sf::Lines);
@@ -1068,13 +1038,6 @@ main (int argc, char **argv)
     settings
   };
 
-  /*
-  window.setPosition ({
-    SW / 2 - WW / 2,
-    SH / 2 - WH / 2
-  });
-  */
-
   window.setVerticalSyncEnabled (VSYNC);
   window.setMouseCursorGrabbed (true);
   window.setMouseCursorVisible (SHOW_MOUSE);
@@ -1132,6 +1095,14 @@ main (int argc, char **argv)
   double exposure_target = camera.exposure;
 
   double camera_speed = parsec_from_ly (1.0);
+
+  double r_rad_target = 0.0;
+  double y_rad_target = 0.0;
+  double p_rad_target = 0.0;
+
+  vec3 camera_velocity = { 0, 0, 0 };
+
+  bool smooth_camera = false;
 
   /////////////////////////////////////////////////////////////////////////////
 
@@ -1265,6 +1236,7 @@ main (int argc, char **argv)
               case sf::Keyboard::Num0:
               case sf::Keyboard::Home:
                 camera.position = { 0, 0, 0 };
+                camera_velocity = { 0, 0, 0 };
                 break;
               case sf::Keyboard::Add:
                 exposure_target *= 2.0;
@@ -1280,6 +1252,9 @@ main (int argc, char **argv)
                 break;
               case sf::Keyboard::C:
                 camera_speed = SOL_PC_S;
+                break;
+              case sf::Keyboard::F8:
+                smooth_camera = !smooth_camera;
                 break;
               default:
                 break;
@@ -1319,20 +1294,36 @@ main (int argc, char **argv)
 
       mouse.update (window);
 
-      // Roll
       {
-        const double SENSITIVITY = 0.1 * (/* camera.fov */ 90.0 / 90.0);
-
-        double r_rad = 0;
+        const double SENSITIVITY_ROLL = 0.1 * (90.0 / 90.0);
+        const double SENSITIVITY_YP   = 0.1 * (camera.fov / 90.0);
 
         if (sf::Mouse::isButtonPressed (sf::Mouse::Middle))
-          r_rad += RAD (mouse.delta.x * SENSITIVITY);
+          r_rad_target += RAD (mouse.delta.x * SENSITIVITY_ROLL);
 
         if (sf::Keyboard::isKeyPressed (sf::Keyboard::Q))
-          r_rad -= RAD (135) * dt;
+          r_rad_target -= RAD (135) * dt;
 
         if (sf::Keyboard::isKeyPressed (sf::Keyboard::E))
-          r_rad += RAD (135) * dt;
+          r_rad_target += RAD (135) * dt;
+
+        if (!sf::Mouse::isButtonPressed (sf::Mouse::Middle))
+          {
+            y_rad_target += RAD (mouse.delta.x * SENSITIVITY_YP);
+            p_rad_target += RAD (mouse.delta.y * SENSITIVITY_YP);
+          }
+      }
+
+      {
+        const double t = 1.0 - std::exp ((smooth_camera ? -1.0 : -1000.0) * dt);
+
+        const double r_rad = r_rad_target * t;
+        const double y_rad = y_rad_target * t;
+        const double p_rad = p_rad_target * t;
+
+        r_rad_target -= r_rad;
+        y_rad_target -= y_rad;
+        p_rad_target -= p_rad;
 
         const double sr = std::sin (r_rad);
         const double cr = std::cos (r_rad);
@@ -1342,42 +1333,24 @@ main (int argc, char **argv)
 
         camera.right = new_right;
         camera.up    = new_up;
-      }
 
-      // Yaw, Pitch
-      {
-        const double SENSITIVITY = 0.1 * (camera.fov / 90.0);
+        const double sy = std::sin(y_rad);
+        const double cy = std::cos(y_rad);
 
-        double y_rad = 0;
-        double p_rad = 0;
+        const vec3 new_forward_y = normalize (camera.forward * cy + camera.right   * sy);
+        const vec3 new_right_y   = normalize (camera.right   * cy - camera.forward * sy);
 
-        if (!sf::Mouse::isButtonPressed (sf::Mouse::Middle))
-          {
-            y_rad += RAD (mouse.delta.x * SENSITIVITY);
-            p_rad += RAD (mouse.delta.y * SENSITIVITY);
-          }
-
-        const double sy = std::sin (y_rad);
-        const double cy = std::cos (y_rad);
+        camera.forward = new_forward_y;
+        camera.right   = new_right_y;
 
         const double sp = std::sin (p_rad);
         const double cp = std::cos (p_rad);
 
-        {
-          const vec3 new_forward = normalize (camera.forward * cy + camera.right   * sy);
-          const vec3 new_right   = normalize (camera.right   * cy - camera.forward * sy);
+        const vec3 new_forward_p = normalize (camera.forward * cp - camera.up      * sp);
+        const vec3 new_up_p      = normalize (camera.up      * cp + camera.forward * sp);
 
-          camera.forward = new_forward;
-          camera.right   = new_right;
-        }
-
-        {
-          const vec3 new_forward = normalize (camera.forward * cp - camera.up      * sp);
-          const vec3 new_up      = normalize (camera.up      * cp + camera.forward * sp);
-
-          camera.forward = new_forward;
-          camera.up      = new_up;
-        }
+        camera.forward = new_forward_p;
+        camera.up      = new_up_p;
       }
 
       camera.forward = normalize (camera.forward);
@@ -1385,22 +1358,34 @@ main (int argc, char **argv)
       camera.up      = normalize (cross (camera.right,   camera.forward));
 
       {
-        const auto MOVE_SPEED = camera_speed * dt;
+        vec3 velocity = { 0, 0, 0 };
 
         if (sf::Keyboard::isKeyPressed (sf::Keyboard::W))
-          camera.position += camera.forward * MOVE_SPEED;
+          velocity += camera.forward;
+
         if (sf::Keyboard::isKeyPressed (sf::Keyboard::S))
-          camera.position -= camera.forward * MOVE_SPEED;
+          velocity -= camera.forward;
 
         if (sf::Keyboard::isKeyPressed (sf::Keyboard::D))
-          camera.position += camera.right * MOVE_SPEED;
+          velocity += camera.right;
+
         if (sf::Keyboard::isKeyPressed (sf::Keyboard::A))
-          camera.position -= camera.right * MOVE_SPEED;
+          velocity -= camera.right;
 
         if (sf::Keyboard::isKeyPressed (sf::Keyboard::Space))
-          camera.position += camera.up * MOVE_SPEED;
+          velocity += camera.up;
+
         if (sf::Keyboard::isKeyPressed (sf::Keyboard::LControl))
-          camera.position -= camera.up * MOVE_SPEED;
+          velocity -= camera.up;
+
+        if (velocity.length () > 0.0)
+          velocity = normalize (velocity) * camera_speed;
+
+        const double t = 1.0 - std::exp ((smooth_camera ? -1.0 : -1000.0) * dt);
+
+        camera_velocity += (velocity - camera_velocity) * t;
+
+        camera.position += camera_velocity * dt;
       }
 
       /////////////////////////////////////////////////////////////////////////
@@ -1568,9 +1553,15 @@ main (int argc, char **argv)
                 "Dec " + to_human_round (DEG (d), 1) + "°\n";
             }
 
+          std::string cinematic = "";
+
+          if (smooth_camera)
+            cinematic = "\nCinematic";
+
           text_camera.write (
             orientation +
-            "FOV " + to_human_round (camera.fov, 1) + "°"
+            "FOV " + to_human_round (camera.fov, 1) + "°" +
+            cinematic
           );
           text_camera.place (WW - 15, WH - 15, 1, 1);
           draw_text_backdrop (window, text_camera);
