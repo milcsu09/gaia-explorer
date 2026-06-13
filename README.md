@@ -41,6 +41,7 @@ make
 | ---- | ------ |
 | `ESC` | Quit |
 | `F1` | Toggle HUD |
+| `F8` | Toggle cinematic camera |
 | `0` or `Home` | Teleport to Earth (`0,0,0`) |
 | `W` | Move forward |
 | `S` | Move backward |
